@@ -56,21 +56,12 @@ class StripeCreateCheckoutSessionView(views.APIView):
 
         stripe.api_key = getattr(settings, 'STRIPE_SECRET_KEY', '')
         if not stripe.api_key:
-            # Fallback for testing: return mock checkout session
-            mock_ref = f"mock_stripe_{int(timezone.now().timestamp())}"
-            Payment.objects.create(
-                customer=customer,
-                order=order,
-                amount=order.total_amount,
-                provider=Payment.Provider.STRIPE,
-                transaction_reference=mock_ref,
-                status=Payment.Status.PENDING,
+            return Response(
+                {
+                    "detail": "Stripe secret key is not configured. Please set STRIPE_SECRET_KEY in environment."
+                },
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
-            return Response({
-                "checkout_url": f"http://localhost:8000/payments/mock-stripe-success/?ref={mock_ref}&order_id={order.id}",
-                "session_id": mock_ref,
-                "mock": True
-            }, status=status.HTTP_200_OK)
 
         try:
             frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:8000')
@@ -201,23 +192,13 @@ class MpesaStkPushView(views.APIView):
         if not phone.startswith('254'):
             phone = '254' + phone
 
-        # For sandbox / mock testing if credentials missing
         if not (consumer_key and consumer_secret and shortcode and passkey):
-            mock_ref = f"mock_mpesa_{int(timezone.now().timestamp())}"
-            Payment.objects.create(
-                customer=customer,
-                order=order,
-                amount=order.total_amount,
-                provider=Payment.Provider.MPESA,
-                transaction_reference=mock_ref,
-                status=Payment.Status.PENDING,
+            return Response(
+                {
+                    "detail": "M-Pesa Daraja keys are not configured. Please set MPESA_CONSUMER_KEY, MPESA_CONSUMER_SECRET, MPESA_BUSINESS_SHORTCODE, and MPESA_PASSKEY in environment."
+                },
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
-            return Response({
-                "MerchantRequestID": mock_ref,
-                "CheckoutRequestID": mock_ref,
-                "ResponseDescription": "Success. Mock STK Push request accepted.",
-                "mock": True
-            }, status=status.HTTP_200_OK)
 
         # Initiate STK push
         try:
@@ -330,21 +311,3 @@ class MpesaCallbackView(views.APIView):
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class MockStripeSuccessView(views.APIView):
-    """Helper view to simulate successful Stripe payments in development/sandbox."""
-    permission_classes = [AllowAny]
-
-    def get(self, request):
-        ref = request.query_params.get('ref')
-        order_id = request.query_params.get('order_id')
-        try:
-            payment = Payment.objects.get(transaction_reference=ref)
-            payment.status = Payment.Status.SUCCESSFUL
-            payment.save(update_fields=['status', 'updated_at'])
-            order = payment.order
-            if order:
-                order.payment_status = Order.PaymentStatus.PAID
-                order.save(update_fields=['payment_status', 'updated_at'])
-            return Response({"message": f"Order {order_id} marked as PAID via mock Stripe."})
-        except Payment.DoesNotExist:
-            return Response({"detail": "Payment reference not found."}, status=status.HTTP_404_NOT_FOUND)

@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/auth';
+import { AuthProvider } from './context/auth';
+import { useAuth } from './context/useAuth';
 import LandingPage from './pages/LandingPage';
 import AboutPage from './pages/AboutPage';
 import ServicesPage from './pages/ServicesPage';
@@ -15,10 +16,10 @@ import AdminDashboard from './pages/AdminDashboard';
 const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRoles?: string[] }> = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
   if (loading) return (
-    <div className="page-bg min-h-screen flex items-center justify-center">
+    <div className="min-h-screen bg-white flex items-center justify-center">
       <div className="flex flex-col items-center gap-3">
-        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-        <span className="text-sm font-semibold text-white/50">Loading...</span>
+        <div className="w-10 h-10 border-4 border-brand border-t-transparent rounded-full animate-spin" />
+        <span className="text-sm font-semibold text-slate-400">Loading...</span>
       </div>
     </div>
   );

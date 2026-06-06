@@ -5,7 +5,6 @@ from apps.payments.views import (
     StripeWebhookView,
     MpesaStkPushView,
     MpesaCallbackView,
-    MockStripeSuccessView,
 )
 
 app_name = 'payments'
@@ -16,5 +15,4 @@ urlpatterns = [
     path('stripe-webhook/', StripeWebhookView.as_view(), name='stripe-webhook'),
     path('pay-mpesa/', MpesaStkPushView.as_view(), name='pay-mpesa'),
     path('mpesa-callback/', MpesaCallbackView.as_view(), name='mpesa-callback'),
-    path('mock-stripe-success/', MockStripeSuccessView.as_view(), name='mock-stripe-success'),
 ]

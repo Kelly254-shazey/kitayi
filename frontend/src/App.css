@@ -1,18 +1,19 @@
 .counter {
-  font-size: 16px;
-  padding: 5px 10px;
-  border-radius: 5px;
-  color: var(--accent);
-  background: var(--accent-bg);
+  font-size: 0.875rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.75rem;
+  font-weight: 700;
+  color: var(--brand-primary);
+  background: var(--brand-primary-soft);
   border: 2px solid transparent;
   transition: border-color 0.3s;
-  margin-bottom: 24px;
+  margin-bottom: 1.5rem;
 
   &:hover {
-    border-color: var(--accent-border);
+    border-color: var(--brand-primary-border);
   }
   &:focus-visible {
-    outline: 2px solid var(--accent);
+    outline: 2px solid var(--brand-cyan);
     outline-offset: 2px;
   }
 }
@@ -72,7 +73,7 @@
 
 #next-steps {
   display: flex;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--border-color);
   text-align: left;
 
   & > div {
@@ -96,11 +97,11 @@
 }
 
 #docs {
-  border-right: 1px solid var(--border);
+  border-right: 1px solid var(--border-color);
 
   @media (max-width: 1024px) {
     border-right: none;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--border-color);
   }
 }
 
@@ -116,19 +117,22 @@
   }
 
   a {
-    color: var(--text-h);
-    font-size: 16px;
+    color: var(--text-main);
+    font-size: 1rem;
+    font-weight: 700;
     border-radius: 6px;
-    background: var(--social-bg);
+    background: var(--bg-social);
     display: flex;
     padding: 6px 12px;
     align-items: center;
     gap: 8px;
     text-decoration: none;
-    transition: box-shadow 0.3s;
+    transition: all 0.3s;
+    border: 1px solid transparent;
 
     &:hover {
-      box-shadow: var(--shadow);
+      box-shadow: var(--shadow-sm);
+      border-color: var(--brand-primary-border);
     }
     .button-icon {
       height: 18px;
@@ -155,7 +159,7 @@
 
 #spacer {
   height: 88px;
-  border-top: 1px solid var(--border);
+  border-top: 2px solid var(--border-color); /* Increased for better visual separation */
   @media (max-width: 1024px) {
     height: 48px;
   }
@@ -167,7 +171,7 @@
 
   &::before,
   &::after {
-    content: '';
+    content: "";
     position: absolute;
     top: -4.5px;
     border: 5px solid transparent;
@@ -175,10 +179,10 @@
 
   &::before {
     left: 0;
-    border-left-color: var(--border);
+    border-left-color: var(--border-color);
   }
   &::after {
     right: 0;
-    border-right-color: var(--border);
+    border-right-color: var(--border-color);
   }
 }

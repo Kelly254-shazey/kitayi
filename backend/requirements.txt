@@ -39,4 +39,5 @@ factory-boy==3.2.1
 
 # Development
 django-debug-toolbar==4.1.0
+django-extensions==4.1
 setuptools

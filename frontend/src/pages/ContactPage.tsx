@@ -26,15 +26,15 @@ export default function ContactPage() {
   };
 
   return (
-    <div className="page-bg">
+    <div className="page-shell">
       <Navbar />
       <div className="pt-24">
 
         {/* Hero */}
         <section className="py-20 max-w-7xl mx-auto px-6 text-center flex flex-col items-center gap-5">
           <div className="section-tag">Contact Us</div>
-          <h1 className="text-5xl font-display font-black text-white">Get in Touch</h1>
-          <p className="text-white/50 max-w-xl leading-relaxed">
+          <h1 className="text-5xl font-display font-black text-ink">Get in Touch</h1>
+          <p className="text-ink-secondary max-w-xl leading-relaxed">
             For bulk orders, corporate account inquiries, or emergency deliveries — our team is available 24/7.
           </p>
           <a href="tel:+254700000000" className="btn-primary px-8 py-4">
@@ -49,8 +49,8 @@ export default function ContactPage() {
             {/* Inquiry Form */}
             <div className="glass-card p-8 flex flex-col gap-6">
               <div className="flex flex-col gap-1">
-                <h2 className="font-display font-black text-2xl text-white">Send an Inquiry</h2>
-                <p className="text-sm text-white/45">We respond to all inquiries within 2 business hours.</p>
+                <h2 className="font-display font-black text-2xl text-ink">Send an Inquiry</h2>
+                <p className="text-sm text-ink-muted">We respond to all inquiries within 2 business hours.</p>
               </div>
 
               {sent ? (
@@ -59,8 +59,8 @@ export default function ContactPage() {
                     <CheckCircle2 className="w-8 h-8 text-success" />
                   </div>
                   <div>
-                    <h3 className="font-display font-bold text-xl text-white mb-2">Message Sent!</h3>
-                    <p className="text-sm text-white/50">Our team will contact you at <strong className="text-white">{email}</strong> shortly.</p>
+                    <h3 className="font-display font-bold text-xl text-ink mb-2">Message Sent!</h3>
+                    <p className="text-sm text-ink-secondary">Our team will contact you at <strong className="text-ink">{email}</strong> shortly.</p>
                   </div>
                   <button onClick={() => { setSent(false); setName(''); setEmail(''); setMessage(''); }} className="btn-secondary px-6 py-2.5 text-sm">
                     Send Another
@@ -70,16 +70,16 @@ export default function ContactPage() {
                 <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-semibold text-white/45 uppercase tracking-wider">Full Name *</label>
+                      <label className="text-xs font-semibold text-ink-muted uppercase tracking-wider">Full Name *</label>
                       <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Jane Mwangi" className="glass-input" required />
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-semibold text-white/45 uppercase tracking-wider">Email Address *</label>
+                      <label className="text-xs font-semibold text-ink-muted uppercase tracking-wider">Email Address *</label>
                       <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="jane@gmail.com" className="glass-input" required />
                     </div>
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-white/45 uppercase tracking-wider">Subject</label>
+                    <label className="text-xs font-semibold text-ink-muted uppercase tracking-wider">Subject</label>
                     <select value={subject} onChange={e => setSubject(e.target.value)} className="glass-input">
                       <option>General Inquiry</option>
                       <option>Corporate Account / Bulk Order</option>
@@ -89,7 +89,7 @@ export default function ContactPage() {
                     </select>
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-white/45 uppercase tracking-wider">Message *</label>
+                    <label className="text-xs font-semibold text-ink-muted uppercase tracking-wider">Message *</label>
                     <textarea
                       value={message} onChange={e => setMessage(e.target.value)}
                       placeholder="Describe your inquiry or request in detail..."
@@ -107,15 +107,15 @@ export default function ContactPage() {
             <div className="flex flex-col gap-5">
               {OFFICES.map(({ name, address, phone, hours }) => (
                 <div key={name} className="glass-card p-6 flex flex-col gap-4">
-                  <h3 className="font-display font-bold text-white">{name}</h3>
+                  <h3 className="font-display font-bold text-ink">{name}</h3>
                   <div className="flex flex-col gap-3">
-                    <div className="flex items-start gap-3 text-sm text-white/55">
+                    <div className="flex items-start gap-3 text-sm text-ink-secondary">
                       <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" /> {address}
                     </div>
-                    <a href={`tel:${phone}`} className="flex items-center gap-3 text-sm text-white/55 hover:text-white transition-colors">
+                    <a href={`tel:${phone}`} className="flex items-center gap-3 text-sm text-ink-secondary hover:text-ink transition-colors">
                       <Phone className="w-4 h-4 text-primary shrink-0" /> {phone}
                     </a>
-                    <div className="flex items-center gap-3 text-sm text-white/55">
+                    <div className="flex items-center gap-3 text-sm text-ink-secondary">
                       <Clock className="w-4 h-4 text-primary shrink-0" /> {hours}
                     </div>
                   </div>
@@ -123,14 +123,14 @@ export default function ContactPage() {
               ))}
 
               <div className="glass-card p-6 flex flex-col gap-3">
-                <h3 className="font-display font-bold text-white flex items-center gap-2">
+                <h3 className="font-display font-bold text-ink flex items-center gap-2">
                   <Mail className="w-5 h-5 text-primary" /> Email Support
                 </h3>
                 <div className="flex flex-col gap-2">
-                  <a href="mailto:support@kitayisolutions.com" className="text-sm text-white/55 hover:text-white transition-colors">
+                  <a href="mailto:support@kitayisolutions.com" className="text-sm text-ink-secondary hover:text-ink transition-colors">
                     support@kitayisolutions.com — General & Customer Support
                   </a>
-                  <a href="mailto:corporate@kitayisolutions.com" className="text-sm text-white/55 hover:text-white transition-colors">
+                  <a href="mailto:corporate@kitayisolutions.com" className="text-sm text-ink-secondary hover:text-ink transition-colors">
                     corporate@kitayisolutions.com — Corporate Accounts
                   </a>
                 </div>

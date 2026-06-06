@@ -3,6 +3,7 @@ from django.urls import path
 from apps.customers.views import (
     AddressDetailView,
     AddressListCreateView,
+    BillLookupAPIView,
     CustomerProfileView,
     SetDefaultAddressView,
 )
@@ -18,4 +19,5 @@ urlpatterns = [
         SetDefaultAddressView.as_view(),
         name='set-default-address',
     ),
+    path('bill-lookup/', BillLookupAPIView.as_view(), name='bill-lookup'),
 ]

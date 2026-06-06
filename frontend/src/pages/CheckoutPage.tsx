@@ -1,7 +1,9 @@
-import { useState } from 'react';
-import { useLocation, useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useLocation, Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/auth';
 import { CheckCircle2, Droplets, ArrowRight, AlertCircle, RefreshCw, X } from 'lucide-react';
 import Navbar from '../components/Navbar';
+import { ordersApi, paymentsApi } from '../services/api';
 
 type CartItem = { product: { id: string; name: string; price: number; volume_liters: number }; qty: number };
 
@@ -10,9 +12,16 @@ const STEPS = ['Cart', 'Delivery Info', 'Payment', 'Confirmation'];
 export default function CheckoutPage() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const initialCart: CartItem[] = location.state?.cart ?? [];
 
-  const [step, setStep] = useState(initialCart.length > 0 ? 1 : 0);
+  useEffect(() => {
+    if (!user) {
+      navigate('/login', { state: { from: '/checkout', cart: initialCart } });
+    }
+  }, [user, navigate, initialCart]);
+
+  const [step, setStep] = useState(user && initialCart.length > 0 ? 1 : 0);
   const [cart, setCart] = useState<CartItem[]>(initialCart);
 
   // Step 2 fields
@@ -27,7 +36,9 @@ export default function CheckoutPage() {
   // Step 3 fields
   const [payError, setPayError] = useState('');
   const [paying, setPaying] = useState(false);
-  const [trackingNumber] = useState(`KY-${Date.now().toString().slice(-8)}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`);
+  const [trackingNumber, setTrackingNumber] = useState(() =>
+    `KY-${Date.now().toString().slice(-8)}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`
+  );
 
   const removeItem = (id: string) => setCart(prev => prev.filter(i => i.product.id !== id));
   const subtotal = cart.reduce((acc, i) => acc + i.product.price * i.qty, 0);
@@ -46,21 +57,53 @@ export default function CheckoutPage() {
   const handlePay = async (method: 'mpesa' | 'stripe') => {
     setPayError('');
     setPaying(true);
-    await new Promise(r => setTimeout(r, 1800));
-    // Simulate occasional failure for demo retry UX
-    if (method === 'stripe' && Math.random() < 0.2) {
-      setPayError('Payment declined by card issuer. Please verify your card details or try a different method.');
+
+    try {
+      const payload = {
+        items: cart.map(({ product, qty }) => ({ product: product.id, quantity: qty })),
+        delivery_address: address,
+        delivery_date: deliveryDate,
+        delivery_slot: deliverySlot,
+        coupon_code: coupon.trim() || undefined,
+      };
+
+      const orderRes = await ordersApi.create(payload);
+      const order = orderRes.data;
+      setTrackingNumber(order.tracking_number || trackingNumber);
+
+      const paymentRes = method === 'mpesa'
+        ? await paymentsApi.mpesaPush(order.id)
+        : await paymentsApi.stripeCheckout(order.id);
+
+      if (paymentRes.data?.checkout_url) {
+        window.location.href = paymentRes.data.checkout_url;
+        return;
+      }
+
+      setStep(4);
+    } catch (error: unknown) {
+      let message = 'Payment failed. Please review your details and try again.';
+      if (typeof error === 'string') {
+        message = error;
+      } else if (error instanceof Error) {
+        message = error.message || message;
+      } else if (error && typeof error === 'object') {
+        const maybe = error as { response?: { data?: { detail?: unknown } } };
+        if (maybe.response && maybe.response.data && typeof maybe.response.data === 'object') {
+          const detail = (maybe.response.data as { detail?: unknown }).detail;
+          if (typeof detail === 'string') message = detail;
+        }
+      }
+      setPayError(message);
+    } finally {
       setPaying(false);
-      return;
     }
-    setPaying(false);
-    setStep(4);
   };
 
   const todayStr = new Date().toISOString().split('T')[0];
 
   return (
-    <div className="page-bg min-h-screen">
+    <div className="page-shell min-h-screen">
       <Navbar />
       <div className="pt-24 pb-20 max-w-4xl mx-auto px-6">
 
@@ -72,11 +115,11 @@ export default function CheckoutPage() {
                 <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all ${
                   idx < step ? 'bg-success border-success text-white' :
                   idx === step ? 'bg-primary border-primary text-white shadow-glow-sm' :
-                  'border-white/20 text-white/30 bg-white/5'
+                  'border-ink/20 text-ink-muted bg-ink/5'
                 }`}>
                   {idx < step ? <CheckCircle2 className="w-4 h-4" /> : idx + 1}
                 </div>
-                <span className={`text-[10px] font-semibold uppercase tracking-wider transition-all ${idx === step ? 'text-primary' : idx < step ? 'text-success' : 'text-white/25'}`}>
+                <span className={`text-[10px] font-semibold uppercase tracking-wider transition-all ${idx === step ? 'text-primary' : idx < step ? 'text-success' : 'text-ink-muted'}`}>
                   {label}
                 </span>
               </div>
@@ -90,9 +133,9 @@ export default function CheckoutPage() {
         {/* STEP 0: Empty cart redirect */}
         {step === 0 && (
           <div className="glass-card p-16 text-center flex flex-col items-center gap-5">
-            <Droplets className="w-14 h-14 text-white/15" />
-            <h2 className="font-display font-black text-2xl text-white">Your cart is empty</h2>
-            <p className="text-white/50">Head back to the shop to add items before checking out.</p>
+            <Droplets className="w-14 h-14 text-ink-muted" />
+            <h2 className="font-display font-black text-2xl text-ink">Your cart is empty</h2>
+            <p className="text-ink-secondary">Head back to the shop to add items before checking out.</p>
             <Link to="/shop" className="btn-primary px-8 py-3.5">Browse Products</Link>
           </div>
         )}
@@ -100,17 +143,17 @@ export default function CheckoutPage() {
         {/* STEP 1: Cart Review */}
         {step === 1 && (
           <div className="glass-card p-8 flex flex-col gap-6">
-            <h2 className="font-display font-black text-2xl text-white">Review Your Cart</h2>
+            <h2 className="font-display font-black text-2xl text-ink">Review Your Cart</h2>
             <div className="flex flex-col gap-3">
               {cart.map(({ product, qty }) => (
                 <div key={product.id} className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/8">
                   <div className="flex flex-col gap-0.5">
-                    <p className="text-sm font-bold text-white">{product.name}</p>
-                    <p className="text-xs text-white/40">×{qty} unit{qty > 1 ? 's' : ''} @ Ksh {product.price.toLocaleString()}</p>
+                    <p className="text-sm font-bold text-ink">{product.name}</p>
+                    <p className="text-xs text-ink-secondary">×{qty} unit{qty > 1 ? 's' : ''} @ Ksh {product.price.toLocaleString()}</p>
                   </div>
                   <div className="flex items-center gap-4">
-                    <span className="font-display font-black text-white">Ksh {(product.price * qty).toLocaleString()}</span>
-                    <button onClick={() => removeItem(product.id)} className="text-white/25 hover:text-danger transition-colors">
+                    <span className="font-display font-black text-ink">Ksh {(product.price * qty).toLocaleString()}</span>
+                    <button title="Remove item" aria-label="Remove item" onClick={() => removeItem(product.id)} className="text-ink-muted hover:text-danger transition-colors">
                       <X className="w-4 h-4" />
                     </button>
                   </div>
@@ -120,9 +163,10 @@ export default function CheckoutPage() {
 
             {/* Coupon */}
             <div className="flex flex-col gap-2">
-              <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">Coupon Code</label>
+              <label htmlFor="coupon" className="text-xs font-semibold text-ink-muted uppercase tracking-wider">Coupon Code</label>
               <div className="flex gap-2">
                 <input
+                  id="coupon"
                   type="text" placeholder="e.g. WELCOME10" value={coupon}
                   onChange={e => setCoupon(e.target.value)}
                   className="glass-input flex-1"
@@ -138,8 +182,8 @@ export default function CheckoutPage() {
             <div className="border-t border-white/10 pt-5 flex flex-col gap-2 text-sm">
               <div className="flex justify-between text-white/50"><span>Subtotal</span><span>Ksh {subtotal.toLocaleString()}</span></div>
               {discountAmt > 0 && <div className="flex justify-between text-success font-semibold"><span>Discount</span><span>-Ksh {discountAmt.toFixed(2)}</span></div>}
-              <div className="flex justify-between text-white/50"><span>VAT (16%)</span><span>Ksh {tax.toFixed(2)}</span></div>
-              <div className="flex justify-between font-display font-black text-white text-base border-t border-white/10 pt-3 mt-1">
+              <div className="flex justify-between text-ink-secondary"><span>VAT (16%)</span><span>Ksh {tax.toFixed(2)}</span></div>
+              <div className="flex justify-between font-display font-black text-ink text-base border-t border-ink/10 pt-3 mt-1">
                 <span>Total</span><span>Ksh {total.toFixed(2)}</span>
               </div>
             </div>
@@ -157,36 +201,38 @@ export default function CheckoutPage() {
         {/* STEP 2: Delivery Info */}
         {step === 2 && (
           <div className="glass-card p-8 flex flex-col gap-6">
-            <h2 className="font-display font-black text-2xl text-white">Delivery Information</h2>
+            <h2 className="font-display font-black text-2xl text-ink">Delivery Information</h2>
 
             <div className="grid md:grid-cols-2 gap-5">
               <div className="md:col-span-2 flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">Street Address *</label>
+                <label htmlFor="address" className="text-xs font-semibold text-ink-muted uppercase tracking-wider">Street Address *</label>
                 <input
+                  id="address"
                   type="text" placeholder="e.g. 123 Kilimani Road, Apt 4B"
                   value={address} onChange={e => setAddress(e.target.value)}
                   className="glass-input" required
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">City / Town</label>
+                <label htmlFor="city" className="text-xs font-semibold text-ink-muted uppercase tracking-wider">City / Town</label>
                 <input
+                  id="city"
                   type="text" value={city} onChange={e => setCity(e.target.value)}
                   className="glass-input"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">Preferred Delivery Date *</label>
+                <label htmlFor="deliveryDate" className="text-xs font-semibold text-ink-muted uppercase tracking-wider">Preferred Delivery Date *</label>
                 <input
+                  id="deliveryDate"
                   type="date" value={deliveryDate} min={todayStr}
                   onChange={e => setDeliveryDate(e.target.value)}
                   className="glass-input"
-                  style={{ colorScheme: 'dark' }}
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">Time Slot</label>
-                <select value={deliverySlot} onChange={e => setDeliverySlot(e.target.value)} className="glass-input">
+                <label htmlFor="deliverySlot" className="text-xs font-semibold text-ink-muted uppercase tracking-wider">Time Slot</label>
+                <select id="deliverySlot" value={deliverySlot} onChange={e => setDeliverySlot(e.target.value)} className="glass-input">
                   <option>Morning (8am–12pm)</option>
                   <option>Afternoon (12pm–5pm)</option>
                   <option>Evening (5pm–8pm)</option>
@@ -211,24 +257,24 @@ export default function CheckoutPage() {
         {step === 3 && (
           <div className="glass-card p-8 flex flex-col gap-7">
             <div>
-              <h2 className="font-display font-black text-2xl text-white mb-1">Secure Payment</h2>
-              <p className="text-white/40 text-sm">PCI-DSS compliant — your card data is never stored on our servers.</p>
+              <h2 className="font-display font-black text-2xl text-ink mb-1">Secure Payment</h2>
+              <p className="text-ink-muted text-sm">PCI-DSS compliant — your card data is never stored on our servers.</p>
             </div>
 
             {/* Order summary */}
             <div className="bg-white/5 border border-white/10 rounded-2xl p-5 flex flex-col gap-2 text-sm">
               <div className="flex justify-between text-white/50"><span>Subtotal</span><span>Ksh {subtotal.toLocaleString()}</span></div>
               {discountAmt > 0 && <div className="flex justify-between text-success"><span>Discount</span><span>-Ksh {discountAmt.toFixed(2)}</span></div>}
-              <div className="flex justify-between text-white/50"><span>VAT (16%)</span><span>Ksh {tax.toFixed(2)}</span></div>
-              <div className="flex justify-between font-display font-black text-white text-lg border-t border-white/10 pt-3 mt-1">
+              <div className="flex justify-between text-ink-secondary"><span>VAT (16%)</span><span>Ksh {tax.toFixed(2)}</span></div>
+              <div className="flex justify-between font-display font-black text-ink text-lg border-t border-ink/10 pt-3 mt-1">
                 <span>Total Due</span><span>Ksh {total.toFixed(2)}</span>
               </div>
             </div>
 
             {/* Delivery summary */}
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-xs text-white/50 flex flex-col gap-1.5">
-              <p><span className="text-white/25">Address:</span> {address}, {city}</p>
-              <p><span className="text-white/25">Scheduled:</span> {deliveryDate} — {deliverySlot}</p>
+            <div className="bg-ink/5 border border-ink/10 rounded-2xl p-4 text-xs text-ink-secondary flex flex-col gap-1.5">
+              <p><span className="text-ink-muted">Address:</span> {address}, {city}</p>
+              <p><span className="text-ink-muted">Scheduled:</span> {deliveryDate} — {deliverySlot}</p>
             </div>
 
             {/* Error with Retry */}
@@ -265,7 +311,7 @@ export default function CheckoutPage() {
               </button>
             </div>
 
-            <button onClick={() => setStep(2)} className="text-xs text-white/30 hover:text-white/60 text-center transition-colors">
+            <button onClick={() => setStep(2)} className="text-xs text-ink-muted hover:text-ink-secondary text-center transition-colors">
               ← Back to Delivery Info
             </button>
           </div>
@@ -278,13 +324,13 @@ export default function CheckoutPage() {
               <CheckCircle2 className="w-10 h-10 text-success" />
             </div>
             <div className="flex flex-col gap-2">
-              <h2 className="font-display font-black text-3xl text-white">Order Confirmed!</h2>
-              <p className="text-white/55 leading-relaxed max-w-md">
+              <h2 className="font-display font-black text-3xl text-ink">Order Confirmed!</h2>
+              <p className="text-ink-secondary leading-relaxed max-w-md">
                 Your water delivery is scheduled. You'll receive an SMS confirmation with live GPS tracking details shortly.
               </p>
             </div>
             <div className="bg-white/5 border border-white/10 rounded-2xl px-8 py-4 text-center">
-              <p className="text-xs text-white/35 mb-1">Tracking Number</p>
+              <p className="text-xs text-ink-muted mb-1">Tracking Number</p>
               <p className="font-mono font-black text-primary text-lg tracking-widest">{trackingNumber}</p>
             </div>
             <div className="flex flex-wrap gap-3 justify-center mt-2">

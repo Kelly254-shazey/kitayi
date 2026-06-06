@@ -42,17 +42,17 @@ const PROCESS = [
 
 export default function ServicesPage() {
   return (
-    <div className="page-bg">
+    <div className="page-shell">
       <Navbar />
       <div className="pt-24">
 
         {/* Hero */}
         <section className="py-24 max-w-7xl mx-auto px-6 text-center flex flex-col items-center gap-6">
           <div className="section-tag">Our Services</div>
-          <h1 className="text-5xl md:text-6xl font-display font-black text-white leading-tight max-w-3xl">
+          <h1 className="text-5xl md:text-6xl font-display font-black text-ink leading-tight max-w-3xl">
             Water Solutions for <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-cyan-400">Every Scale</span>
           </h1>
-          <p className="text-white/55 text-lg leading-relaxed max-w-2xl">
+          <p className="text-ink-secondary text-lg leading-relaxed max-w-2xl">
             From a single 20L dispenser refill to a 20,000L industrial tanker — Kitayi Solutions delivers purified, KEBS-certified water on your schedule.
           </p>
           <div className="flex flex-wrap gap-3 justify-center mt-2">
@@ -69,8 +69,8 @@ export default function ServicesPage() {
                 <Droplets className="w-7 h-7 text-blue-400" />
               </div>
               <div className="section-tag w-fit">Residential</div>
-              <h2 className="text-4xl font-display font-black text-white">Residential Water Supply</h2>
-              <p className="text-white/55 leading-relaxed">
+              <h2 className="text-4xl font-display font-black text-ink">Residential Water Supply</h2>
+              <p className="text-ink-secondary leading-relaxed">
                 Fresh, purified water delivered straight to your home or apartment. Whether you need a single dispenser refill or a monthly subscription, we make it effortless.
               </p>
               <Link to="/shop" className="btn-primary w-fit px-6 py-3">
@@ -104,8 +104,8 @@ export default function ServicesPage() {
                 <Award className="w-7 h-7 text-violet-400" />
               </div>
               <div className="section-tag w-fit">Commercial & Industrial</div>
-              <h2 className="text-4xl font-display font-black text-white">Bulk Delivery for Business</h2>
-              <p className="text-white/55 leading-relaxed">
+              <h2 className="text-4xl font-display font-black text-ink">Bulk Delivery for Business</h2>
+              <p className="text-ink-secondary leading-relaxed">
                 Hospitals, factories, schools, and construction sites — our dedicated corporate division manages large-volume water logistics with SLA-backed precision.
               </p>
               <div className="flex gap-3 flex-wrap">
@@ -126,8 +126,8 @@ export default function ServicesPage() {
                 <FlaskConical className="w-7 h-7 text-emerald-400" />
               </div>
               <div className="section-tag w-fit">Bottled Water</div>
-              <h2 className="text-4xl font-display font-black text-white">Kitayi Branded Bottled Water</h2>
-              <p className="text-white/55 leading-relaxed">
+              <h2 className="text-4xl font-display font-black text-ink">Kitayi Branded Bottled Water</h2>
+              <p className="text-ink-secondary leading-relaxed">
                 Our premium bottled water line passes a 7-stage purification process and carries KEBS & WHO certification. Available in multiple sizes for every setting.
               </p>
               <Link to="/shop" className="btn-primary w-fit px-6 py-3">
@@ -149,14 +149,14 @@ export default function ServicesPage() {
         <section className="py-24 max-w-7xl mx-auto px-6">
           <div className="text-center flex flex-col gap-4 mb-16">
             <div className="section-tag mx-auto">How It Works</div>
-            <h2 className="text-4xl font-display font-black text-white">Order in 4 Simple Steps</h2>
+            <h2 className="text-4xl font-display font-black text-ink">Order in 4 Simple Steps</h2>
           </div>
           <div className="grid md:grid-cols-4 gap-6">
             {PROCESS.map(({ step, title, desc }) => (
               <div key={step} className="glass-card p-7 flex flex-col gap-4 text-center items-center">
                 <span className="w-12 h-12 rounded-full border-2 border-primary/40 bg-primary/15 flex items-center justify-center text-xl font-display font-black text-primary">{step}</span>
-                <h3 className="font-display font-bold text-white">{title}</h3>
-                <p className="text-sm text-white/50 leading-relaxed">{desc}</p>
+                <h3 className="font-display font-bold text-ink">{title}</h3>
+                <p className="text-sm text-ink-secondary leading-relaxed">{desc}</p>
               </div>
             ))}
           </div>
@@ -175,8 +175,8 @@ export default function ServicesPage() {
                 <div className="w-10 h-10 rounded-xl bg-primary/15 border border-primary/25 flex items-center justify-center">
                   <Icon className="w-5 h-5 text-primary" />
                 </div>
-                <p className="text-sm font-bold text-white">{label}</p>
-                <p className="text-xs text-white/45">{sub}</p>
+                <p className="text-sm font-bold text-ink">{label}</p>
+                <p className="text-xs text-ink-muted">{sub}</p>
               </div>
             ))}
           </div>
@@ -185,8 +185,8 @@ export default function ServicesPage() {
         {/* CTA */}
         <section className="py-24 max-w-3xl mx-auto px-6 text-center flex flex-col items-center gap-6">
           <div className="section-tag">Ready to Order?</div>
-          <h2 className="text-4xl font-display font-black text-white">Start Your Water Delivery Today</h2>
-          <p className="text-white/55 leading-relaxed">
+          <h2 className="text-4xl font-display font-black text-ink">Start Your Water Delivery Today</h2>
+          <p className="text-ink-secondary leading-relaxed">
             Join 50,000+ Kenyan households and businesses who trust Kitayi Solutions for reliable, certified water delivery.
           </p>
           <div className="flex flex-wrap gap-3 justify-center">

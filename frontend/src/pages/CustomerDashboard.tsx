@@ -1,344 +1,217 @@
 import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/auth';
-import { 
-  MOCK_PRODUCTS, MOCK_ORDERS, MOCK_SUBSCRIPTIONS, MOCK_PAYMENTS
-} from '../services/api';
-import { 
-  Droplets, LogOut, ShoppingBag, CreditCard, Calendar, Truck, 
-  MapPin, Plus, Play, Pause, X, Map,
-  FileText, Sparkles
+import { ordersApi, paymentsApi, productsApi, subscriptionsApi } from '../services/api';
+import {
+  Droplets, LogOut, ShoppingBag, CreditCard, Calendar, Truck,
+  MapPin, Plus, Play, Pause, X, Map, FileText, Sparkles,
+  ChevronRight, ArrowRight, Home, Menu
 } from 'lucide-react';
+
+type OrderItem = { product_name: string; quantity: number; total_price: number };
+type Order = { id: string; tracking_number: string; status: string; payment_status: string; total_amount: number; delivery_date: string; delivery_slot: string; items: OrderItem[]; created_at: string };
+type Subscription = { id: string; product_name: string; quantity: number; frequency: string; status: string; next_delivery_date: string; billing_cycle: string };
+type Payment = { id: string; order_tracking?: string; amount: number; provider: string; transaction_reference: string; status: string; payment_date: string };
+type Product = { id: string; name: string; category: string; price: number; image_url: string; volume_liters: number; stock_qty: number; safety_level: number; sku: string };
+type Tab = 'overview' | 'orders' | 'subscriptions' | 'billing';
+
+const TABS_CONFIG: { id: Tab; label: string; icon: React.FC<{ className?: string }> }[] = [
+  { id: 'overview', label: 'Overview', icon: Home },
+  { id: 'orders', label: 'Orders & Tracking', icon: Truck },
+  { id: 'subscriptions', label: 'Subscriptions', icon: Calendar },
+  { id: 'billing', label: 'Billing', icon: CreditCard },
+];
+
+const STATUS_BADGE_CLASSES: Record<string, string> = {
+  Delivered: 'badge-success', 'In Transit': 'badge-info', Pending: 'badge-warning',
+  Assigned: 'badge-info', Dispatched: 'badge-info', Cancelled: 'badge-danger', Failed: 'badge-danger',
+};
+
+const gpsProgressWidthClasses: Record<number, string> = {
+  0: 'w-[0%]', 10: 'w-[10%]', 20: 'w-[20%]', 30: 'w-[30%]', 40: 'w-[40%]',
+  50: 'w-[50%]', 60: 'w-[60%]', 70: 'w-[70%]', 80: 'w-[80%]', 90: 'w-[90%]', 100: 'w-[100%]',
+};
+const gpsPinPositionClasses: Record<number, string> = {
+  0: 'top-[10%] left-[10%]', 10: 'top-[17%] left-[17%]', 20: 'top-[23%] left-[23%]', 30: 'top-[29%] left-[29%]',
+  40: 'top-[35%] left-[35%]', 50: 'top-[42%] left-[42%]', 60: 'top-[48%] left-[48%]', 70: 'top-[54%] left-[54%]',
+  80: 'top-[60%] left-[60%]', 90: 'top-[66%] left-[66%]', 100: 'top-[72%] left-[72%]',
+};
+const getProgressWidthClass = (progress: number) => gpsProgressWidthClasses[Math.min(100, Math.round(progress / 10) * 10)] ?? 'w-[0%]';
+const getGpsPinPositionClass = (progress: number) => gpsPinPositionClasses[Math.min(100, Math.round(progress / 10) * 10)] ?? 'top-[10%] left-[10%]';
 
 export default function CustomerDashboard() {
   const { user, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'subscriptions' | 'billing'>('overview');
-  
-  // Dashboard state
-  const [orders, setOrders] = useState(MOCK_ORDERS);
-  const [subscriptions, setSubscriptions] = useState(MOCK_SUBSCRIPTIONS);
-  const [payments, setPayments] = useState(MOCK_PAYMENTS);
-  const [cart, setCart] = useState<{product: any, qty: number}[]>([]);
-  const [addresses] = useState([
-    { id: 'addr-1', street: '123 Kilimani Road, Apt 4B', city: 'Nairobi', type: 'Home', is_default: true },
-    { id: 'addr-2', street: 'NSSF Building, Floor 14', city: 'Nairobi', type: 'Office', is_default: false },
-  ]);
-
-  // Modals & form state
-  const [orderModalOpen, setOrderModalOpen] = useState(false);
-  const [newSubModalOpen, setNewSubModalOpen] = useState(false);
-  const [selectedAddress, setSelectedAddress] = useState('addr-1');
-  const [deliveryDate, setDeliveryDate] = useState('');
-  const [deliverySlot, setDeliverySlot] = useState('Morning');
-  const [couponCode, setCouponCode] = useState('');
-  const [couponMessage, setCouponMessage] = useState('');
-  const [discountVal, setDiscountVal] = useState(0);
-
-  // Subscription form state
-  const [subProduct, setSubProduct] = useState(MOCK_PRODUCTS[2].id);
+  const navigate = useNavigate();
+  const [tab, setTab] = useState<Tab>('overview');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [subs, setSubs] = useState<Subscription[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [tracking, setTracking] = useState<Order | null>(null);
+  const [gpsProgress, setGpsProgress] = useState(0);
+  const [newSubOpen, setNewSubOpen] = useState(false);
+  const [subProduct, setSubProduct] = useState('');
   const [subQty, setSubQty] = useState(2);
   const [subFreq, setSubFreq] = useState('Weekly');
 
-  // Selected Order for GPS Tracking
-  const [trackingOrder, setTrackingOrder] = useState<any>(null);
-  const [gpsProgress, setGpsProgress] = useState(0);
-
-  // Auto-simulate GPS tracking progress for In Transit orders
   useEffect(() => {
-    let interval: any;
-    if (trackingOrder && trackingOrder.status === 'In Transit') {
-      interval = setInterval(() => {
-        setGpsProgress((prev) => {
-          if (prev >= 100) {
-            clearInterval(interval);
-            return 100;
-          }
-          return prev + 10;
-        });
-      }, 3000);
-    } else {
+    productsApi.list().then(r => setProducts(Array.isArray(r.data) ? r.data : r.data?.results || []));
+    ordersApi.list().then(r => setOrders(Array.isArray(r.data) ? r.data : r.data?.results || []));
+    paymentsApi.list().then(r => setPayments(Array.isArray(r.data) ? r.data : r.data?.results || []));
+    subscriptionsApi.list().then(r => setSubs(Array.isArray(r.data) ? r.data : r.data?.results || []));
+  }, []);
+
+  useEffect(() => {
+    if (products.length > 0 && !subProduct) {
+      setSubProduct(products[0].id);
+    }
+  }, [products, subProduct]);
+
+  // GPS tracker — only runs interval when In Transit; resets via cleanup
+  useEffect(() => {
+    if (!tracking || tracking.status !== 'In Transit') return;
+    const iv = setInterval(() => {
+      setGpsProgress(p => (p >= 100 ? 100 : p + 8));
+    }, 2500);
+    return () => {
+      clearInterval(iv);
       setGpsProgress(0);
-    }
-    return () => clearInterval(interval);
-  }, [trackingOrder]);
-
-  const handleAddToCart = (product: any) => {
-    setCart((prev) => {
-      const existing = prev.find(item => item.product.id === product.id);
-      if (existing) {
-        return prev.map(item => item.product.id === product.id ? { ...item, qty: item.qty + 1 } : item);
-      }
-      return [...prev, { product, qty: 1 }];
-    });
-  };
-
-  const handleRemoveFromCart = (productId: string) => {
-    setCart(prev => prev.filter(item => item.product.id !== productId));
-  };
-
-  // Coupon code logic
-  const handleApplyCoupon = () => {
-    if (couponCode.toUpperCase() === 'WELCOME10') {
-      setDiscountVal(0.1);
-      setCouponMessage('10% discount applied successfully!');
-    } else if (couponCode.toUpperCase() === 'KSH500') {
-      setDiscountVal(500);
-      setCouponMessage('Ksh 500 flat discount applied successfully!');
-    } else {
-      setDiscountVal(0);
-      setCouponMessage('Invalid coupon code.');
-    }
-  };
-
-  const getCartTotals = () => {
-    const subtotal = cart.reduce((acc, item) => acc + (item.product.price * item.qty), 0);
-    let discount = 0;
-    if (discountVal > 0 && discountVal < 1) {
-      discount = subtotal * discountVal;
-    } else if (discountVal >= 1) {
-      discount = Math.min(discountVal, subtotal);
-    }
-    const taxable = subtotal - discount;
-    const tax = taxable * 0.16; // VAT 16%
-    const total = taxable + tax;
-    return { subtotal, discount, tax, total };
-  };
-
-  const handleCheckout = (paymentMethod: 'mpesa' | 'stripe') => {
-    const totals = getCartTotals();
-    const trackingNum = `KY-20260605-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-    const newOrder = {
-      id: `ord-${Date.now()}`,
-      tracking_number: trackingNum,
-      customer_email: user?.email || 'user@kitayi.com',
-      status: 'Pending',
-      total_amount: totals.total,
-      tax_amount: totals.tax,
-      discount_amount: totals.discount,
-      delivery_date: deliveryDate || '2026-06-06',
-      delivery_slot: deliverySlot,
-      payment_status: paymentMethod === 'mpesa' ? 'Paid' : 'Pending',
-      items: cart.map(item => ({
-        id: `item-${Date.now()}`,
-        product_name: item.product.name,
-        quantity: item.qty,
-        unit_price: item.product.price,
-        total_price: item.product.price * item.qty
-      })),
-      created_at: new Date().toISOString(),
     };
+  }, [tracking]);
 
-    setOrders([newOrder, ...orders]);
-    
-    // Log Payment
-    if (paymentMethod === 'mpesa') {
-      const newPayment = {
-        id: `pay-${Date.now()}`,
-        order_tracking: trackingNum,
-        amount: totals.total,
-        provider: 'M-Pesa',
-        transaction_reference: `MPESA-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
-        status: 'Successful',
-        payment_date: new Date().toISOString(),
-      };
-      setPayments([newPayment, ...payments]);
+  const startTracking = (order: Order) => {
+    setGpsProgress(0);
+    setTracking(order);
+  };
+
+  const toggleSub = (id: string) =>
+    setSubs(prev => prev.map(s => s.id === id ? { ...s, status: s.status === 'Active' ? 'Paused' : 'Active' } : s));
+
+  const handleCreateSub = () => {
+    const prod = products.find(p => p.id === subProduct);
+    setSubs(prev => [{
+      id: `s${Date.now()}`, product_name: prod?.name ?? 'Water',
+      quantity: subQty, frequency: subFreq, status: 'Active',
+      next_delivery_date: '2026-06-12', billing_cycle: 'Prepaid',
+    }, ...prev]);
+    setNewSubOpen(false);
+  };
+
+  const payNow = async (order: Order) => {
+    try {
+      await paymentsApi.mpesaPush(order.id);
+      setOrders(prev => prev.map(o => o.id === order.id ? { ...o, payment_status: 'Paid' } : o));
+    } catch (error) {
+      console.error('Payment failed:', error);
+      alert('Payment failed. Please try again.');
     }
-
-    setCart([]);
-    setOrderModalOpen(false);
-    setActiveTab('orders');
-    alert(paymentMethod === 'mpesa' 
-      ? 'M-Pesa payment triggered! Check your phone for STK Push prompt.' 
-      : 'Redirecting to secure Stripe Card gateway...'
-    );
   };
-
-  const handleCreateSubscription = () => {
-    const prod = MOCK_PRODUCTS.find(p => p.id === subProduct);
-    const newSub = {
-      id: `sub-${Date.now()}`,
-      product_name: prod ? prod.name : 'Purified Refill',
-      quantity: subQty,
-      frequency: subFreq,
-      status: 'Active',
-      next_delivery_date: '2026-06-12',
-      billing_cycle: 'Prepaid',
-      last_billed_date: '2026-06-05',
-    };
-
-    setSubscriptions([newSub, ...subscriptions]);
-    setNewSubModalOpen(false);
-    setActiveTab('subscriptions');
-  };
-
-  const toggleSubscription = (subId: string) => {
-    setSubscriptions(prev => prev.map(sub => {
-      if (sub.id === subId) {
-        const nextStatus = sub.status === 'Active' ? 'Paused' : 'Active';
-        return { ...sub, status: nextStatus };
-      }
-      return sub;
-    }));
-  };
-
-  const handleSimulatePayment = (order: any) => {
-    setOrders(prev => prev.map(o => o.id === order.id ? { ...o, payment_status: 'Paid' } : o));
-    const newPayment = {
-      id: `pay-${Date.now()}`,
-      order_tracking: order.tracking_number,
-      amount: order.total_amount,
-      provider: 'M-Pesa',
-      transaction_reference: `MPESA-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
-      status: 'Successful',
-      payment_date: new Date().toISOString(),
-    };
-    setPayments([newPayment, ...payments]);
-  };
-
-  const { subtotal, discount, tax, total } = getCartTotals();
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
+    <div className="page-shell min-h-screen flex">
       {/* Sidebar */}
-      <aside className="w-64 bg-slate-900 text-slate-400 flex flex-col justify-between shrink-0 hidden md:flex">
-        <div className="flex flex-col">
-          <div className="h-16 px-6 border-b border-slate-800 flex items-center gap-2 text-white">
-            <Droplets className="w-6 h-6 text-primary" />
-            <span className="font-display font-bold text-sm tracking-wider">KITAYI SOLUTIONS</span>
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 w-64 flex flex-col justify-between border-r border-slate-200 transition-transform duration-300 md:translate-x-0 md:static md:block ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} brand-surface`}>
+        <div>
+          <div className="h-16 px-5 flex items-center gap-2.5 border-b border-white/8">
+            <div className="w-8 h-8 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center">
+              <Droplets className="w-4 h-4 text-primary" />
+            </div>
+            <span className="font-display font-bold text-white text-sm tracking-tight">KITAYI<span className="text-primary">SOLUTIONS</span></span>
           </div>
-
-          <nav className="p-4 flex flex-col gap-1">
-            <button 
-              onClick={() => { setActiveTab('overview'); setTrackingOrder(null); }}
-              className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${activeTab === 'overview' ? 'bg-primary text-white' : 'hover:bg-slate-800 hover:text-white'}`}
-            >
-              <ShoppingBag className="w-5 h-5" /> Overview
-            </button>
-            <button 
-              onClick={() => { setActiveTab('orders'); setTrackingOrder(null); }}
-              className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${activeTab === 'orders' ? 'bg-primary text-white' : 'hover:bg-slate-800 hover:text-white'}`}
-            >
-              <Truck className="w-5 h-5" /> Orders & GPS Tracking
-            </button>
-            <button 
-              onClick={() => { setActiveTab('subscriptions'); setTrackingOrder(null); }}
-              className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${activeTab === 'subscriptions' ? 'bg-primary text-white' : 'hover:bg-slate-800 hover:text-white'}`}
-            >
-              <Calendar className="w-5 h-5" /> Subscriptions
-            </button>
-            <button 
-              onClick={() => { setActiveTab('billing'); setTrackingOrder(null); }}
-              className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${activeTab === 'billing' ? 'bg-primary text-white' : 'hover:bg-slate-800 hover:text-white'}`}
-            >
-              <CreditCard className="w-5 h-5" /> Billing & Payments
-            </button>
+          <nav className="p-3 flex flex-col gap-1 mt-2">
+            {TABS_CONFIG.map(({ id, label, icon: Icon }) => (
+              <button key={id} onClick={() => { setTab(id); setSidebarOpen(false); }}
+                className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${tab === id ? 'bg-primary/20 text-white border border-primary/30' : 'text-white/50 hover:text-white hover:bg-white/6'}`}>
+                <Icon className="w-4 h-4" /> {label}
+              </button>
+            ))}
           </nav>
         </div>
-
-        <div className="p-4 border-t border-slate-800 flex items-center justify-between text-xs">
-          <div className="flex flex-col gap-0.5">
-            <span className="font-bold text-slate-200">{user?.full_name}</span>
-            <span className="text-slate-500 text-[10px] truncate max-w-[120px]">{user?.email}</span>
+        <div className="p-4 border-t border-white/8 flex items-center justify-between">
+          <div>
+            <p className="text-xs font-bold text-white">{user?.full_name}</p>
+            <p className="text-[10px] text-white/35 truncate max-w-[140px]">{user?.email}</p>
           </div>
-          <button onClick={logout} className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all">
+          <button aria-label="Logout" title="Logout" onClick={logout} className="p-2 rounded-lg text-white/35 hover:text-danger hover:bg-danger/10 transition-all">
             <LogOut className="w-4 h-4" />
           </button>
         </div>
       </aside>
 
-      {/* Main Panel */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-y-auto">
-        {/* Top Navbar */}
-        <header className="h-16 bg-white border-b border-border px-6 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2 md:hidden">
-            <Droplets className="w-6 h-6 text-primary" />
-            <span className="font-display font-bold text-slate-800 text-sm">KITAYI</span>
-          </div>
+      {sidebarOpen && <div className="fixed inset-0 z-30 bg-black/50 md:hidden" onClick={() => setSidebarOpen(false)} />}
 
-          <h2 className="font-display font-bold text-slate-800 hidden md:block capitalize">{activeTab} Panel</h2>
-          
-          <div className="flex items-center gap-4">
-            <span className="text-xs bg-slate-100 text-slate-700 px-3 py-1 rounded-full font-bold border border-border">
-              {user?.user_type}
-            </span>
-            <button onClick={logout} className="md:hidden text-slate-500 hover:text-slate-800">
-              <LogOut className="w-5 h-5" />
+      {/* Main */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+        <header className="h-16 border-b border-white/8 px-6 flex items-center justify-between shrink-0 panel-bg-soft">
+          <div className="flex items-center gap-3">
+            <button aria-label="Open navigation" title="Open navigation" className="md:hidden text-white/50 hover:text-white" onClick={() => setSidebarOpen(true)}>
+              <Menu className="w-5 h-5" />
             </button>
+            <h2 className="font-display font-bold text-white capitalize text-sm md:text-base">
+              {TABS_CONFIG.find(t => t.id === tab)?.label}
+            </h2>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-xs bg-primary/15 text-primary border border-primary/25 px-3 py-1 rounded-full font-bold">{user?.user_type}</span>
+            <Link to="/shop" className="btn-primary text-xs px-4 py-2 hidden md:flex">
+              <ShoppingBag className="w-3.5 h-3.5" /> Shop
+            </Link>
           </div>
         </header>
 
-        {/* Content Body */}
-        <div className="p-6 max-w-7xl mx-auto w-full flex flex-col gap-6">
-          {/* TAB 1: OVERVIEW */}
-          {activeTab === 'overview' && (
+        <div className="p-6 max-w-7xl w-full mx-auto flex flex-col gap-6">
+
+          {/* OVERVIEW */}
+          {tab === 'overview' && (
             <>
-              {/* Promo Banner */}
-              <div className="bg-gradient-to-r from-primary to-blue-600 rounded-2xl p-6 text-white flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-md">
+              <div className="glass-card p-6 bg-gradient-to-r from-primary/20 to-cyan-500/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-5 h-5" />
-                    <span className="text-sm font-bold uppercase tracking-wider">Promotional Discount</span>
+                  <div className="flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-widest">
+                    <Sparkles className="w-3.5 h-3.5" /> Welcome back
                   </div>
-                  <h3 className="font-display font-extrabold text-xl md:text-2xl">Use Coupon WELCOME10 for 10% Off</h3>
-                  <p className="text-sm text-blue-100">Apply coupon WELCOME10 during checkout to reduce your utility invoice billings.</p>
+                  <h3 className="font-display font-black text-2xl text-white">{user?.full_name}</h3>
+                    <p className="font-semibold text-white/60 text-sm">Use code <strong className="text-primary">WELCOME10</strong> for 10% off your next order.</p>
                 </div>
-                <button 
-                  onClick={() => setOrderModalOpen(true)}
-                  className="bg-white hover:bg-slate-50 text-primary px-5 py-2.5 rounded-lg text-sm font-semibold transition-all shadow-sm"
-                >
-                  Order Now
+                <button onClick={() => navigate('/shop')} className="btn-primary px-6 py-3 shrink-0">
+                  Order Water <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
 
-              {/* KPI metrics */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div className="bg-white border border-border p-6 rounded-2xl shadow-sm flex flex-col gap-1">
-                  <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Account Balance</span>
-                  <span className="text-2xl font-display font-extrabold text-secondary">Ksh 0.00</span>
-                  <span className="text-[10px] text-slate-400">Monthly utility balance invoices</span>
-                </div>
-                <div className="bg-white border border-border p-6 rounded-2xl shadow-sm flex flex-col gap-1">
-                  <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Active Orders</span>
-                  <span className="text-2xl font-display font-extrabold text-secondary">
-                    {orders.filter(o => o.status !== 'Delivered' && o.status !== 'Cancelled').length}
-                  </span>
-                  <span className="text-[10px] text-slate-400">Currently being dispatched or shipped</span>
-                </div>
-                <div className="bg-white border border-border p-6 rounded-2xl shadow-sm flex flex-col gap-1">
-                  <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Active Subscriptions</span>
-                  <span className="text-2xl font-display font-extrabold text-secondary">
-                    {subscriptions.filter(s => s.status === 'Active').length}
-                  </span>
-                  <span className="text-[10px] text-slate-400">Recurring delivery schedules</span>
-                </div>
-                <div className="bg-white border border-border p-6 rounded-2xl shadow-sm flex flex-col gap-1">
-                  <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Total Deliveries</span>
-                  <span className="text-2xl font-display font-extrabold text-secondary">
-                    {orders.filter(o => o.status === 'Delivered').length}
-                  </span>
-                  <span className="text-[10px] text-slate-400">Purified water shipments completed</span>
-                </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[  
+                  { label: 'Account Balance', value: 'Ksh 0.00', sub: 'No outstanding balance' },
+                  { label: 'Active Orders', value: orders.filter(o => !['Delivered', 'Cancelled'].includes(o.status)).length, sub: 'In progress' },
+                  { label: 'Subscriptions', value: subs.filter(s => s.status === 'Active').length, sub: 'Active plans' },
+                  { label: 'Total Deliveries', value: orders.filter(o => o.status === 'Delivered').length, sub: 'Completed' },
+                ].map(({ label, value, sub }) => (
+                  <div key={label} className="glass-card p-5 flex flex-col gap-1">
+                    <p className="text-xs font-semibold text-white/50 uppercase tracking-wider">{label}</p>
+                    <p className="text-2xl font-display font-black text-white">{value}</p>
+                    <p className="text-[10px] font-semibold text-white/60">{sub}</p>
+                  </div>
+                ))}
               </div>
 
-              {/* Product list */}
-              <div className="flex flex-col gap-4">
-                <h3 className="font-display font-extrabold text-lg">Purified Water Catalog</h3>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                  {MOCK_PRODUCTS.map((prod) => (
-                    <div key={prod.id} className="bg-white border border-border rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col">
-                      <img src={prod.image_url} alt={prod.name} className="h-40 w-full object-cover" />
-                      <div className="p-5 flex flex-col gap-3 flex-1 justify-between">
-                        <div className="flex flex-col gap-1">
-                          <span className="text-[10px] font-bold text-primary uppercase tracking-widest">{prod.category}</span>
-                          <h4 className="font-bold text-sm text-slate-800 leading-tight">{prod.name}</h4>
-                          <span className="text-xs text-slate-500">Volume: {prod.volume_liters}L</span>
-                        </div>
-                        <div className="flex items-center justify-between mt-2">
-                          <span className="font-display font-extrabold text-slate-800">Ksh {prod.price.toFixed(2)}</span>
-                          <button 
-                            onClick={() => { handleAddToCart(prod); setOrderModalOpen(true); }}
-                            className="bg-primary hover:bg-primary-hover text-white p-2 rounded-lg transition-colors"
-                          >
-                            <Plus className="w-4 h-4" />
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-display font-bold text-white">Water Catalog</h3>
+                  <Link to="/shop" className="text-xs text-primary hover:underline flex items-center gap-1">View all <ChevronRight className="w-3.5 h-3.5" /></Link>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {products.slice(0, 4).map(p => (
+                    <div key={p.id} className="glass-card overflow-hidden flex flex-col hover:-translate-y-1 transition-all duration-300 cursor-pointer" onClick={() => navigate('/shop')}>
+                      <img src={p.image_url} alt={p.name} className="h-32 w-full object-cover"
+                        onError={e => (e.currentTarget.src = 'https://images.unsplash.com/photo-1548839133-9aa08246bc61?w=400')} />
+                      <div className="p-4 flex flex-col gap-2">
+                        <p className="text-[10px] font-bold text-primary uppercase tracking-widest">{p.category}</p>
+                        <p className="text-xs font-bold text-white leading-tight">{p.name}</p>
+                        <div className="flex items-center justify-between mt-1">
+                          <span className="font-display font-black text-sm text-white">Ksh {p.price.toLocaleString()}</span>
+                          <button aria-label="View product in shop" title="View product in shop" onClick={e => { e.stopPropagation(); navigate('/shop'); }}
+                            className="w-7 h-7 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center text-primary hover:bg-primary hover:text-white transition-all">
+                            <Plus className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       </div>
@@ -349,521 +222,203 @@ export default function CustomerDashboard() {
             </>
           )}
 
-          {/* TAB 2: ORDERS & GPS TRACKING */}
-          {activeTab === 'orders' && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-              {/* Order list */}
+          {/* ORDERS */}
+          {tab === 'orders' && (
+            <div className="grid lg:grid-cols-3 gap-6 items-start">
               <div className="lg:col-span-2 flex flex-col gap-4">
-                <h3 className="font-display font-extrabold text-lg">Purchase Order History</h3>
-                <div className="flex flex-col gap-3">
-                  {orders.map((order) => (
-                    <div 
-                      key={order.id} 
-                      className={`bg-white border p-5 rounded-2xl shadow-sm flex flex-col gap-4 transition-all hover:border-slate-300 ${trackingOrder?.id === order.id ? 'ring-2 ring-primary/30 border-primary' : ''}`}
-                    >
-                      <div className="flex justify-between items-start flex-wrap gap-2">
-                        <div className="flex flex-col">
-                          <span className="font-bold text-sm text-slate-800">{order.tracking_number}</span>
-                          <span className="text-[10px] text-slate-500">Date: {order.delivery_date} ({order.delivery_slot})</span>
+                <h3 className="font-display font-bold text-white">Order History</h3>
+                {orders.map(o => (
+                  <div key={o.id} className={`glass-card p-5 flex flex-col gap-4 transition-all ${tracking?.id === o.id ? 'border-primary/40' : ''}`}>
+                    <div className="flex justify-between items-start flex-wrap gap-2">
+                      <div>
+                        <p className="font-bold text-sm text-white font-mono">{o.tracking_number}</p>
+                          <p className="text-[10px] font-semibold text-white/60">{o.delivery_date} · {o.delivery_slot}</p>
+                      </div>
+                      <div className="flex gap-2 flex-wrap">
+                        <span className={STATUS_BADGE_CLASSES[o.status] ?? 'badge-gray'}>{o.status}</span>
+                        <span className={o.payment_status === 'Paid' ? 'badge-success' : 'badge-warning'}>{o.payment_status}</span>
+                      </div>
+                    </div>
+                    <div className="text-xs font-semibold text-white/70 flex flex-col gap-1 border-t border-white/6 pt-3">
+                      {o.items.map((it, i) => (
+                        <div key={i} className="flex justify-between">
+                          <span>{it.product_name} <strong className="text-white">×{it.quantity}</strong></span>
+                          <span>Ksh {it.total_price ? it.total_price.toLocaleString() : '0'}</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase border ${
-                            order.status === 'Delivered' ? 'bg-success-light text-success border-success/20' :
-                            order.status === 'In Transit' ? 'bg-primary-light text-primary border-primary/20' :
-                            order.status === 'Pending' ? 'bg-warning-light text-warning border-warning/20' :
-                            'bg-slate-100 text-slate-600 border-border'
-                          }`}>
-                            {order.status}
-                          </span>
-                          <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase border ${
-                            order.payment_status === 'Paid' ? 'bg-success-light text-success border-success/20' :
-                            'bg-warning-light text-warning border-warning/20'
-                          }`}>
-                            {order.payment_status}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="text-xs text-slate-600 flex flex-col gap-1 border-t border-slate-50 pt-3">
-                        {order.items.map((item: any, idx) => (
-                          <div key={idx} className="flex justify-between">
-                            <span>{item.product_name} <strong className="text-slate-800">x{item.quantity}</strong></span>
-                            <span>Ksh {item.total_price.toFixed(2)}</span>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="flex justify-between items-center border-t border-slate-50 pt-3">
-                        <span className="text-sm font-display font-extrabold text-slate-800">Total: Ksh {order.total_amount.toFixed(2)}</span>
-                        <div className="flex items-center gap-2">
-                          {order.status === 'In Transit' && (
-                            <button 
-                              onClick={() => { setTrackingOrder(order); setGpsProgress(0); }}
-                              className="bg-primary hover:bg-primary-hover text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
-                            >
-                              <Map className="w-3.5 h-3.5" /> Track GPS
-                            </button>
-                          )}
-                          {order.payment_status === 'Pending' && (
-                            <button 
-                              onClick={() => handleSimulatePayment(order)}
-                              className="bg-success hover:bg-success/90 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
-                            >
-                              Pay Now
-                            </button>
-                          )}
-                        </div>
-                      </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* GPS Tracker Side panel */}
-              <div className="bg-slate-900 border border-slate-800 text-white rounded-2xl p-6 flex flex-col gap-6">
-                <h3 className="font-display font-bold text-lg flex items-center gap-2">
-                  <MapPin className="w-5 h-5 text-primary" /> Live GPS Dispatcher
-                </h3>
-
-                {trackingOrder ? (
-                  <div className="flex flex-col gap-6">
-                    <div className="flex flex-col gap-1">
-                      <span className="text-xs text-slate-400">Tracking Number</span>
-                      <span className="font-bold font-mono text-sm text-primary">{trackingOrder.tracking_number}</span>
-                    </div>
-
-                    {/* Delivery Progress Bar */}
-                    <div className="flex flex-col gap-2">
-                      <div className="flex justify-between text-xs text-slate-400">
-                        <span>Warehouse Dispatch</span>
-                        <span>Destination</span>
+                    <div className="flex justify-between items-center border-t border-white/6 pt-3">
+                      <span className="font-display font-black text-sm text-white">Ksh {o.total_amount.toLocaleString()}</span>
+                      <div className="flex gap-2">
+                        {o.status === 'In Transit' && (
+                          <button onClick={() => startTracking(o)} className="btn-primary text-xs px-3 py-1.5">
+                            <Map className="w-3.5 h-3.5" /> Track
+                          </button>
+                        )}
+                        {o.payment_status === 'Pending' && (
+                          <button onClick={() => payNow(o)} className="btn-success text-xs px-3 py-1.5">Pay Now</button>
+                        )}
                       </div>
-                      <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-primary transition-all duration-1000 ease-out" 
-                          style={{ width: `${gpsProgress}%` }}
-                        />
-                      </div>
-                      <span className="text-xs text-primary font-bold text-right">
-                        {gpsProgress === 100 ? 'Arrived at destination' : `Truck is ${gpsProgress}% close (ETA: ${15 - Math.round(gpsProgress * 0.15)} mins)`}
-                      </span>
-                    </div>
-
-                    {/* Simulation Map graphic */}
-                    <div className="h-48 bg-slate-800 rounded-xl relative border border-slate-700/50 overflow-hidden flex items-center justify-center">
-                      {/* Grid background simulation */}
-                      <div className="absolute inset-0 opacity-10 bg-[linear-gradient(to_right,#808080_1px,transparent_1px),linear-gradient(to_bottom,#808080_1px,transparent_1px)] bg-[size:14px_24px]"></div>
-                      
-                      <div className="absolute top-10 left-10 text-xs text-slate-500">Kitayi Warehouse</div>
-                      <div className="absolute bottom-10 right-10 text-xs text-slate-500">Your Location</div>
-
-                      {/* Moving driver dot */}
-                      <div 
-                        className="absolute w-4 h-4 bg-primary rounded-full flex items-center justify-center shadow-lg transition-all duration-1000"
-                        style={{
-                          top: `${10 + (gpsProgress * 0.7)}%`,
-                          left: `${10 + (gpsProgress * 0.7)}%`,
-                        }}
-                      >
-                        <div className="w-2 h-2 bg-white rounded-full animate-ping" />
-                      </div>
-                    </div>
-
-                    <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50 text-xs flex flex-col gap-2">
-                      <div className="flex justify-between text-slate-400">
-                        <span>Driver Name:</span>
-                        <strong className="text-white">John Kamau</strong>
-                      </div>
-                      <div className="flex justify-between text-slate-400">
-                        <span>Vehicle:</span>
-                        <strong className="text-white">KCD 456Y (Tanker)</strong>
-                      </div>
-                      <div className="flex justify-between text-slate-400">
-                        <span>Verification OTP:</span>
-                        <strong className="text-primary font-bold text-sm">482015</strong>
-                      </div>
-                      <p className="text-[10px] text-slate-500 mt-1">Provide this 6-digit OTP code to the driver upon delivery to verify and capture your invoice signature.</p>
                     </div>
                   </div>
+                ))}
+              </div>
+
+              {/* GPS Panel */}
+              <div className="glass-card p-6 flex flex-col gap-5 sticky top-6">
+                <h3 className="font-display font-bold text-white flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-primary" /> Live GPS Tracker
+                </h3>
+                {tracking ? (
+                  <>
+                    <p className="text-xs text-white/40">Tracking: <span className="font-mono text-primary">{tracking.tracking_number}</span></p>
+                    <div className="flex flex-col gap-2">
+                      <div className="flex justify-between text-xs text-white/35">
+                        <span>Warehouse</span><span>Your Location</span>
+                      </div>
+                      <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                        <div className={`h-full bg-gradient-to-r from-primary to-cyan-400 transition-all duration-1000 rounded-full ${getProgressWidthClass(gpsProgress)}`} />
+                      </div>
+                      <p className="text-xs text-primary font-semibold">
+                        {gpsProgress >= 100 ? 'Arrived!' : `${gpsProgress}% — ETA ~${Math.ceil((100 - gpsProgress) / 8 * 2.5 / 60)} min`}
+                      </p>
+                    </div>
+                    <div className="h-44 rounded-xl bg-white/5 border border-white/8 relative overflow-hidden">
+                      <div className="absolute inset-0 opacity-10 grid-track-bg" />
+                      <p className="absolute top-3 left-3 text-[9px] text-white/30 font-bold uppercase">Nairobi Grid</p>
+                      <div className={`absolute w-4 h-4 bg-primary rounded-full shadow-glow-sm transition-all duration-1000 flex items-center justify-center ${getGpsPinPositionClass(gpsProgress)}`}>
+                        <div className="w-2 h-2 bg-white rounded-full animate-ping" />
+                      </div>
+                      <div className="absolute bottom-3 right-3 w-3 h-3 bg-success rounded-full" />
+                    </div>
+                    <div className="glass-card p-4 text-xs flex flex-col gap-2">
+                      <div className="flex justify-between text-white/40"><span>Driver</span><strong className="text-white">John Kamau</strong></div>
+                      <div className="flex justify-between text-white/40"><span>Vehicle</span><strong className="text-white">KCD 456Y</strong></div>
+                      <div className="flex justify-between text-white/40"><span>OTP Code</span><strong className="text-primary text-base">482015</strong></div>
+                    </div>
+                  </>
                 ) : (
-                  <div className="text-center py-12 text-slate-500 text-sm flex flex-col items-center gap-3">
-                    <Truck className="w-12 h-12 text-slate-700" />
-                    <p>No active transit orders selected for GPS monitoring. Select an order currently marked as 'In Transit' to follow dispatch tracking.</p>
+                  <div className="py-12 text-center flex flex-col items-center gap-3 text-white/25">
+                    <Truck className="w-10 h-10" />
+                    <p className="text-sm">Select an 'In Transit' order to track it live.</p>
                   </div>
                 )}
               </div>
             </div>
           )}
 
-          {/* TAB 3: SUBSCRIPTIONS */}
-          {activeTab === 'subscriptions' && (
-            <div className="flex flex-col gap-6">
+          {/* SUBSCRIPTIONS */}
+          {tab === 'subscriptions' && (
+            <div className="flex flex-col gap-5">
               <div className="flex justify-between items-center">
-                <h3 className="font-display font-extrabold text-lg">My Recurring Delivery Agreements</h3>
-                <button 
-                  onClick={() => setNewSubModalOpen(true)}
-                  className="bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2"
-                >
-                  <Plus className="w-4 h-4" /> Create Subscription
+                <h3 className="font-display font-bold text-white">Recurring Delivery Plans</h3>
+                <button onClick={() => setNewSubOpen(true)} className="btn-primary text-xs px-4 py-2">
+                  <Plus className="w-3.5 h-3.5" /> New Subscription
                 </button>
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {subscriptions.map((sub) => (
-                  <div key={sub.id} className="bg-white border border-border p-6 rounded-2xl shadow-sm flex flex-col gap-4">
+              <div className="grid md:grid-cols-2 gap-5">
+                {subs.map(s => (
+                  <div key={s.id} className="glass-card p-6 flex flex-col gap-4">
                     <div className="flex justify-between items-start">
-                      <div className="flex flex-col gap-1">
-                        <h4 className="font-bold text-slate-800 text-base">{sub.product_name}</h4>
-                        <span className="text-xs text-slate-500">Quantity: <strong className="text-slate-700">{sub.quantity} units</strong></span>
+                      <div>
+                        <h4 className="font-bold text-white">{s.product_name}</h4>
+                        <p className="text-xs text-white/40 mt-0.5">Qty: {s.quantity} units · {s.billing_cycle}</p>
                       </div>
-                      <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase border ${
-                        sub.status === 'Active' ? 'bg-success-light text-success border-success/20' : 'bg-slate-100 text-slate-600 border-border'
-                      }`}>
-                        {sub.status}
-                      </span>
+                      <span className={s.status === 'Active' ? 'badge-success' : 'badge-gray'}>{s.status}</span>
                     </div>
-
-                    <div className="text-xs text-slate-600 grid grid-cols-2 gap-3 border-t border-slate-50 pt-4">
-                      <div>
-                        <span className="text-slate-400 block mb-0.5">Frequency</span>
-                        <strong className="text-slate-800 text-sm">{sub.frequency}</strong>
-                      </div>
-                      <div>
-                        <span className="text-slate-400 block mb-0.5">Next Delivery</span>
-                        <strong className="text-slate-800 text-sm">{sub.next_delivery_date}</strong>
-                      </div>
-                      <div>
-                        <span className="text-slate-400 block mb-0.5">Billing Setup</span>
-                        <strong className="text-slate-800 text-sm">{sub.billing_cycle}</strong>
-                      </div>
-                      <div>
-                        <span className="text-slate-400 block mb-0.5">Last Billed</span>
-                        <strong className="text-slate-800 text-sm">{sub.last_billed_date || 'N/A'}</strong>
-                      </div>
+                    <div className="grid grid-cols-2 gap-3 border-t border-white/6 pt-4 text-xs">
+                      {[['Frequency', s.frequency], ['Next Delivery', s.next_delivery_date]].map(([k, v]) => (
+                        <div key={k}><p className="text-white/35 mb-0.5">{k}</p><p className="font-bold text-white">{v}</p></div>
+                      ))}
                     </div>
-
-                    <div className="flex items-center gap-2 border-t border-slate-50 pt-4 mt-1">
-                      <button 
-                        onClick={() => toggleSubscription(sub.id)}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold border transition-all ${
-                          sub.status === 'Active' 
-                            ? 'bg-slate-50 text-slate-700 border-border hover:bg-slate-100' 
-                            : 'bg-primary text-white border-primary hover:bg-primary-hover'
-                        }`}
-                      >
-                        {sub.status === 'Active' ? (
-                          <><Pause className="w-3.5 h-3.5" /> Pause Plan</>
-                        ) : (
-                          <><Play className="w-3.5 h-3.5" /> Resume Plan</>
-                        )}
-                      </button>
-                    </div>
+                    <button onClick={() => toggleSub(s.id)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold border transition-all w-fit ${s.status === 'Active' ? 'border-white/15 text-white/60 hover:bg-white/8' : 'btn-primary border-transparent'}`}>
+                      {s.status === 'Active' ? <><Pause className="w-3.5 h-3.5" /> Pause Plan</> : <><Play className="w-3.5 h-3.5" /> Resume Plan</>}
+                    </button>
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {/* TAB 4: BILLING & PAYMENTS */}
-          {activeTab === 'billing' && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-              {/* Payment history */}
+          {/* BILLING */}
+          {tab === 'billing' && (
+            <div className="grid lg:grid-cols-3 gap-6 items-start">
               <div className="lg:col-span-2 flex flex-col gap-4">
-                <h3 className="font-display font-extrabold text-lg">Billing Transaction Log</h3>
-                <div className="bg-white border border-border rounded-2xl overflow-hidden shadow-sm">
-                  <table className="w-full text-left border-collapse text-sm">
+                <h3 className="font-display font-bold text-white">Transaction History</h3>
+                <div className="glass-card overflow-hidden">
+                  <table className="w-full text-sm border-collapse">
                     <thead>
-                      <tr className="bg-slate-50 border-b border-border text-slate-600 font-semibold text-xs uppercase tracking-wider">
-                        <th className="px-6 py-3.5">Reference</th>
-                        <th className="px-6 py-3.5">Order</th>
-                        <th className="px-6 py-3.5">Provider</th>
-                        <th className="px-6 py-3.5">Amount</th>
-                        <th className="px-6 py-3.5">Status</th>
+                      <tr className="border-b border-white/8 text-xs text-white/35 uppercase tracking-wider">
+                        {['Reference', 'Order', 'Provider', 'Amount', 'Status'].map(h => (
+                          <th key={h} className="px-5 py-3.5 text-left font-semibold">{h}</th>
+                        ))}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-border text-slate-700">
-                      {payments.map((pay) => (
-                        <tr key={pay.id} className="hover:bg-slate-50/50">
-                          <td className="px-6 py-3.5 font-mono text-xs">{pay.transaction_reference}</td>
-                          <td className="px-6 py-3.5">{pay.order_tracking}</td>
-                          <td className="px-6 py-3.5">{pay.provider}</td>
-                          <td className="px-6 py-3.5 font-bold">Ksh {pay.amount.toFixed(2)}</td>
-                          <td className="px-6 py-3.5">
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase border ${
-                              pay.status === 'Successful' ? 'bg-success-light text-success border-success/20' : 'bg-warning-light text-warning border-warning/20'
-                            }`}>
-                              {pay.status}
-                            </span>
-                          </td>
+                    <tbody className="divide-y divide-white/5">
+                      {payments.map(p => (
+                        <tr key={p.id} className="hover:bg-white/4 transition-colors">
+                          <td className="px-5 py-3.5 font-mono text-xs text-white/70">{p.transaction_reference}</td>
+                          <td className="px-5 py-3.5 text-white/55">{p.order_tracking ?? '—'}</td>
+                          <td className="px-5 py-3.5 text-white/70">{p.provider}</td>
+                          <td className="px-5 py-3.5 font-bold text-white">Ksh {p.amount.toLocaleString()}</td>
+                          <td className="px-5 py-3.5"><span className={p.status === 'Successful' ? 'badge-success' : 'badge-warning'}>{p.status}</span></td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
               </div>
-
-              {/* Utility account info */}
-              <div className="bg-white border border-border p-6 rounded-2xl shadow-sm flex flex-col gap-6">
-                <h3 className="font-display font-bold text-lg flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-primary" /> Utility Invoices
+              <div className="glass-card p-6 flex flex-col gap-5">
+                <h3 className="font-display font-bold text-white flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-primary" /> Utility Account
                 </h3>
-
-                <div className="flex flex-col gap-3">
-                  <div className="flex justify-between text-xs text-slate-500">
-                    <span>Account Number:</span>
-                    <strong className="text-slate-800">KS-8492-3015</strong>
-                  </div>
-                  <div className="flex justify-between text-xs text-slate-500">
-                    <span>Account Name:</span>
-                    <strong className="text-slate-800">{user?.full_name}</strong>
-                  </div>
-                  <div className="flex justify-between text-xs text-slate-500">
-                    <span>Billing Cycle:</span>
-                    <strong className="text-slate-800">Prepaid</strong>
-                  </div>
+                <div className="flex flex-col gap-2 text-xs">
+                  {[['Account No.', 'KS-8492-3015'], ['Name', user?.full_name ?? '—'], ['Billing', 'Prepaid']].map(([k, v]) => (
+                    <div key={k} className="flex justify-between text-white/40">
+                      <span>{k}</span><strong className="text-white">{v}</strong>
+                    </div>
+                  ))}
                 </div>
-
-                <div className="bg-slate-50 p-4 border border-border rounded-xl flex flex-col gap-2">
-                  <span className="text-xs text-slate-500">Current Balance Due:</span>
-                  <span className="text-3xl font-display font-extrabold text-secondary">Ksh 0.00</span>
-                  <span className="text-[10px] text-slate-400">All current invoices paid. No balance outstanding.</span>
+                <div className="bg-white/5 border border-white/8 rounded-xl p-5 flex flex-col gap-1">
+                  <p className="text-xs text-white/35">Current Balance Due</p>
+                  <p className="text-3xl font-display font-black text-success">Ksh 0.00</p>
+                  <p className="text-[10px] text-white/25">All invoices paid. No balance outstanding.</p>
                 </div>
               </div>
             </div>
           )}
         </div>
-      </main>
+      </div>
 
-      {/* QUICK ORDER MODAL */}
-      {orderModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-6">
-          <div className="bg-white border border-border rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto flex flex-col">
-            <div className="h-16 px-6 border-b border-border flex items-center justify-between shrink-0">
-              <h3 className="font-display font-bold text-lg text-secondary">Place Purified Water Order</h3>
-              <button onClick={() => setOrderModalOpen(false)} className="text-slate-400 hover:text-slate-600">
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="p-6 flex flex-col md:grid md:grid-cols-5 gap-6">
-              {/* Product selector & cart */}
-              <div className="md:col-span-3 flex flex-col gap-4">
-                <h4 className="font-semibold text-sm text-slate-700">Select Purified Water items</h4>
-                
-                {/* Catalog Quick Add */}
-                <div className="flex flex-col gap-2 max-h-[30vh] overflow-y-auto">
-                  {MOCK_PRODUCTS.map(prod => (
-                    <div key={prod.id} className="border border-border p-3 rounded-xl flex items-center justify-between hover:bg-slate-50">
-                      <div className="flex flex-col">
-                        <span className="font-bold text-sm text-slate-800">{prod.name}</span>
-                        <span className="text-xs text-slate-500">Ksh {prod.price.toFixed(2)} / unit</span>
-                      </div>
-                      <button 
-                        onClick={() => handleAddToCart(prod)}
-                        className="bg-primary-light text-primary hover:bg-primary hover:text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
-                      >
-                        Add to Cart
-                      </button>
-                    </div>
-                  ))}
-                </div>
-
-                <hr className="border-border" />
-
-                {/* Cart list */}
-                <div className="flex flex-col gap-3">
-                  <span className="font-semibold text-xs text-slate-600 uppercase tracking-widest">Shopping Cart</span>
-                  {cart.length === 0 ? (
-                    <div className="text-center py-6 text-slate-400 text-xs bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                      Cart is empty. Select items above.
-                    </div>
-                  ) : (
-                    <div className="flex flex-col gap-2">
-                      {cart.map(item => (
-                        <div key={item.product.id} className="flex justify-between items-center text-xs text-slate-700">
-                          <span>{item.product.name} <strong>x{item.qty}</strong></span>
-                          <div className="flex items-center gap-3">
-                            <span className="font-semibold">Ksh {(item.product.price * item.qty).toFixed(2)}</span>
-                            <button onClick={() => handleRemoveFromCart(item.product.id)} className="text-red-500 hover:text-red-700">
-                              <X className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Checkout billing details */}
-              <div className="md:col-span-2 bg-slate-50 p-5 rounded-2xl border border-border flex flex-col gap-4">
-                <h4 className="font-semibold text-sm text-slate-700">Delivery & Checkout</h4>
-
-                <div className="flex flex-col gap-3 text-xs">
-                  {/* Address */}
-                  <div className="flex flex-col gap-1">
-                    <span className="text-slate-500 font-semibold">Delivery Address</span>
-                    <select 
-                      value={selectedAddress} 
-                      onChange={(e) => setSelectedAddress(e.target.value)}
-                      className="border border-border rounded-lg p-2 bg-white"
-                    >
-                      {addresses.map(addr => (
-                        <option key={addr.id} value={addr.id}>{addr.street}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Date */}
-                  <div className="flex flex-col gap-1">
-                    <span className="text-slate-500 font-semibold">Delivery Date</span>
-                    <input 
-                      type="date" 
-                      value={deliveryDate} 
-                      onChange={(e) => setDeliveryDate(e.target.value)}
-                      className="border border-border rounded-lg p-2 bg-white" 
-                    />
-                  </div>
-
-                  {/* Slot */}
-                  <div className="flex flex-col gap-1">
-                    <span className="text-slate-500 font-semibold">Delivery Slot</span>
-                    <select 
-                      value={deliverySlot} 
-                      onChange={(e) => setDeliverySlot(e.target.value)}
-                      className="border border-border rounded-lg p-2 bg-white"
-                    >
-                      <option>Morning</option>
-                      <option>Afternoon</option>
-                      <option>Evening</option>
-                    </select>
-                  </div>
-
-                  {/* Coupon */}
-                  <div className="flex flex-col gap-1">
-                    <span className="text-slate-500 font-semibold">Coupon Code</span>
-                    <div className="flex gap-1">
-                      <input 
-                        type="text" 
-                        placeholder="e.g. WELCOME10" 
-                        value={couponCode}
-                        onChange={(e) => setCouponCode(e.target.value)}
-                        className="border border-border rounded-lg p-2 bg-white flex-1" 
-                      />
-                      <button 
-                        type="button" 
-                        onClick={handleApplyCoupon}
-                        className="bg-slate-700 hover:bg-slate-800 text-white px-3 py-1 rounded-lg text-xs font-semibold"
-                      >
-                        Apply
-                      </button>
-                    </div>
-                    {couponMessage && <span className="text-[10px] text-primary font-semibold mt-0.5">{couponMessage}</span>}
-                  </div>
-                </div>
-
-                <hr className="border-border" />
-
-                {/* Math */}
-                <div className="flex flex-col gap-2 text-xs border-t border-border pt-3">
-                  <div className="flex justify-between text-slate-500">
-                    <span>Subtotal:</span>
-                    <span>Ksh {subtotal.toFixed(2)}</span>
-                  </div>
-                  {discount > 0 && (
-                    <div className="flex justify-between text-primary font-semibold">
-                      <span>Discount:</span>
-                      <span>-Ksh {discount.toFixed(2)}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-slate-500">
-                    <span>VAT (16%):</span>
-                    <span>Ksh {tax.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm font-display font-extrabold text-secondary border-t border-dashed border-border pt-2 mt-1">
-                    <span>Total Price:</span>
-                    <span>Ksh {total.toFixed(2)}</span>
-                  </div>
-                </div>
-
-                {/* Submit buttons */}
-                <div className="flex flex-col gap-2 mt-4">
-                  <button 
-                    disabled={cart.length === 0}
-                    onClick={() => handleCheckout('mpesa')}
-                    className="bg-success hover:bg-success/90 text-white py-2.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
-                  >
-                    Pay with M-Pesa STK
-                  </button>
-                  <button 
-                    disabled={cart.length === 0}
-                    onClick={() => handleCheckout('stripe')}
-                    className="bg-primary hover:bg-primary-hover text-white py-2.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-50"
-                  >
-                    Pay with Stripe (Card)
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* NEW SUBSCRIPTION MODAL */}
-      {newSubModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-6">
-          <div className="bg-white border border-border rounded-2xl shadow-2xl w-full max-w-md p-6 flex flex-col gap-6">
+      {/* New Subscription Modal */}
+      {newSubOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm">
+          <div className="glass-card-light p-8 w-full max-w-md flex flex-col gap-5 animate-slide-up">
             <div className="flex justify-between items-center">
-              <h3 className="font-display font-bold text-lg text-secondary">Schedule Recurring Deliveries</h3>
-              <button onClick={() => setNewSubModalOpen(false)} className="text-slate-400 hover:text-slate-600">
-                <X className="w-6 h-6" />
-              </button>
+              <h3 className="font-display font-bold text-xl text-white">New Subscription</h3>
+              <button aria-label="Close new subscription modal" title="Close new subscription modal" onClick={() => setNewSubOpen(false)} className="text-white/40 hover:text-white"><X className="w-5 h-5" /></button>
             </div>
-
             <div className="flex flex-col gap-4">
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-slate-600 uppercase">Select Product</label>
-                <select 
-                  value={subProduct} 
-                  onChange={(e) => setSubProduct(e.target.value)}
-                  className="border border-border rounded-lg p-2.5 bg-white text-sm"
-                >
-                  {MOCK_PRODUCTS.map(p => (
-                    <option key={p.id} value={p.id}>{p.name} - Ksh {p.price}/unit</option>
-                  ))}
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="new-sub-product" className="text-xs font-semibold text-white/45 uppercase tracking-wider">Product</label>
+                <select id="new-sub-product" value={subProduct} onChange={e => setSubProduct(e.target.value)} className="glass-input">
+                  {products.map(p => <option key={p.id} value={p.id}>{p.name} — Ksh {p.price}/unit</option>)}
                 </select>
               </div>
-
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-slate-600 uppercase">Quantity per Delivery</label>
-                <input 
-                  type="number" 
-                  value={subQty}
-                  onChange={(e) => setSubQty(parseInt(e.target.value) || 1)}
-                  className="border border-border rounded-lg p-2.5 bg-white text-sm"
-                  min="1"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="new-sub-qty" className="text-xs font-semibold text-white/45 uppercase tracking-wider">Quantity</label>
+                  <input id="new-sub-qty" type="number" value={subQty} min={1} onChange={e => setSubQty(+e.target.value)} className="glass-input" />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="new-sub-frequency" className="text-xs font-semibold text-white/45 uppercase tracking-wider">Frequency</label>
+                  <select id="new-sub-frequency" value={subFreq} onChange={e => setSubFreq(e.target.value)} className="glass-input">
+                    {['Weekly', 'Bi-Weekly', 'Monthly'].map(f => <option key={f}>{f}</option>)}
+                  </select>
+                </div>
               </div>
-
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-slate-600 uppercase">Delivery Frequency</label>
-                <select 
-                  value={subFreq} 
-                  onChange={(e) => setSubFreq(e.target.value)}
-                  className="border border-border rounded-lg p-2.5 bg-white text-sm"
-                >
-                  <option>Weekly</option>
-                  <option>Bi-Weekly</option>
-                  <option>Monthly</option>
-                </select>
-              </div>
-
-              <button 
-                onClick={handleCreateSubscription}
-                className="bg-primary hover:bg-primary-hover text-white py-2.5 rounded-lg text-sm font-semibold transition-all mt-2"
-              >
-                Confirm Subscription Plan
-              </button>
+              <button onClick={handleCreateSub} className="btn-primary py-4">Confirm Subscription</button>
             </div>
           </div>
         </div>
