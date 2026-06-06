@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'apps.payments.apps.PaymentsConfig',
     'apps.deliveries.apps.DeliveriesConfig',
     'apps.subscriptions.apps.SubscriptionsConfig',
+    'apps.communications.apps.CommunicationsConfig',
     'apps.common.apps.CommonConfig',
 ]
 

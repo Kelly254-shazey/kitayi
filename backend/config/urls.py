@@ -13,6 +13,7 @@ urlpatterns = [
     path('api/v1/payments/', include('apps.payments.urls', namespace='payments')),
     path('api/v1/deliveries/', include('apps.deliveries.urls', namespace='deliveries')),
     path('api/v1/subscriptions/', include('apps.subscriptions.urls', namespace='subscriptions')),
+    path('api/v1/communications/', include('apps.communications.urls', namespace='communications')),
     path('auth/', include('apps.users.public_urls', namespace='auth_pages')),
     # API Docs
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),

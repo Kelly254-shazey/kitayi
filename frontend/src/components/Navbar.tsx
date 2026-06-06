@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Droplets, Menu, X, ChevronDown } from 'lucide-react';
+import { Menu, X, ChevronDown } from 'lucide-react';
 import { useAuth } from '../context/auth';
+import BrandLogo from './BrandLogo';
 
 const NAV = [
   { label: 'Home', href: '/' },
@@ -38,15 +39,12 @@ export default function Navbar() {
         ? 'shadow-brand-md'
         : ''
     } brand-surface`}>
-      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
 
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2.5 group">
-          <div className="w-9 h-9 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center">
-            <Droplets className="w-5 h-5 text-white" />
-          </div>
-          <span className="font-display font-black text-white text-base tracking-tight">
-            KITAYI<span className="text-cta">SOLUTIONS</span>
+          <span className="bg-white rounded-md px-2 py-1 shadow-sm">
+            <BrandLogo className="h-14 w-auto max-w-[260px]" />
           </span>
         </Link>
 

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
-import { Droplets, Phone, Mail, MapPin, Share2, MessageCircle, Heart, Briefcase } from 'lucide-react';
+import { Phone, Mail, MapPin, Share2, MessageCircle, Heart, Briefcase } from 'lucide-react';
+import BrandLogo from './BrandLogo';
 
 export default function Footer() {
   return (
@@ -10,11 +11,8 @@ export default function Footer() {
           {/* Brand */}
           <div className="flex flex-col gap-5">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-white/15 border border-white/25 flex items-center justify-center">
-                <Droplets className="w-5 h-5 text-white" />
-              </div>
-              <span className="font-display font-black text-white text-base tracking-tight">
-                KITAYI<span className="text-cta">SOLUTIONS</span>
+              <span className="bg-white rounded-md px-2 py-1 shadow-sm">
+                <BrandLogo className="h-14 w-auto max-w-[260px]" />
               </span>
             </div>
             <p className="text-sm text-white/70 leading-relaxed">

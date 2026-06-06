@@ -5,11 +5,18 @@ import {
   Droplets, DollarSign, CheckCircle, Truck, MapPin, ShieldAlert,
   Wrench, BarChart2, Plus, Play, X, Download, Keyboard, LogOut, Menu
 } from 'lucide-react';
+import BrandLogo from '../components/BrandLogo';
 
 type Product = { id: string; name: string; sku: string; category: string; price: number; stock_qty: number; safety_level: number; reorder_threshold: number };
 type OrderItem = { product_name: string; quantity: number };
 type Order = { id: string; tracking_number: string; customer_email?: string; status: string; total_amount: number; items: OrderItem[]; driver_name?: string; vehicle_plate?: string };
 type Vehicle = { id: string; plate_number: string; model: string; capacity_liters: number; status: string; maintenance_due_date: string; fuel_usage: number };
+
+// Define an interface for productsApi to provide a more specific type than 'any'
+interface ProductsApiWithCreate {
+  list: () => Promise<{ data: Product[] | { results: Product[] } }>;
+  create: (data: FormData) => Promise<{ data: Product }>;
+}
 type Tab = 'ops' | 'inventory' | 'fleet' | 'analytics';
 
 const TABS_CONFIG = [
@@ -55,6 +62,7 @@ export default function AdminDashboard() {
   const [replenishQty, setReplenishQty] = useState(50);
   const [addProductOpen, setAddProductOpen] = useState(false);
   const [newProductName, setNewProductName] = useState('');
+  const [newProductImage, setNewProductImage] = useState<File | null>(null);
   const [newProductSku, setNewProductSku] = useState('');
   const [newProductCategory, setNewProductCategory] = useState('Drinking Water');
   const [newProductPrice, setNewProductPrice] = useState(100);
@@ -124,26 +132,30 @@ export default function AdminDashboard() {
       alert('Product name and SKU are required');
       return;
     }
+
+    const formData = new FormData();
+    formData.append('name', newProductName);
+    formData.append('sku', newProductSku);
+    formData.append('category', newProductCategory);
+    formData.append('price', String(newProductPrice));
+    formData.append('stock_qty', String(newProductStock));
+    if (newProductImage) formData.append('image', newProductImage);
+
     try {
-      const newProd: Product = {
-        id: `prod_${Date.now()}`,
-        name: newProductName,
-        sku: newProductSku,
-        category: newProductCategory,
-        price: newProductPrice,
-        stock_qty: newProductStock,
-        safety_level: 50,
-        reorder_threshold: 100,
-      };
-      setProducts(prev => [newProd, ...prev]);
+      // Using type assertion as productsApi.create may not be defined in the interface
+      // but is implemented on the backend.
+      const res = await (productsApi as unknown as ProductsApiWithCreate).create(formData);
+      setProducts(prev => [res.data, ...prev]);
       setNewProductName('');
       setNewProductSku('');
       setNewProductPrice(100);
       setNewProductStock(0);
+      setNewProductImage(null);
       setAddProductOpen(false);
     } catch (error) {
       console.error('Failed to add product:', error);
       alert('Failed to add product');
+      alert('Failed to create product. Check file size and network.');
     }
   };
 
@@ -153,8 +165,8 @@ export default function AdminDashboard() {
       <header className="h-16 border-b border-slate-200 px-6 flex items-center justify-between sticky top-0 z-40 brand-surface">
         <div className="flex items-center gap-5">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center">
-              <Droplets className="w-4 h-4 text-primary" />
+            <div className="w-10 h-10 rounded-xl bg-white overflow-hidden flex items-center justify-center">
+              <BrandLogo variant="mark" className="w-full h-full" />
             </div>
             <span className="font-display font-bold text-white text-sm tracking-tight hidden md:block">
               KITAYI <span className="text-primary">OPS</span>
@@ -212,9 +224,9 @@ export default function AdminDashboard() {
           ].map(({ icon: Icon, label, value, sub, subColor, bg, iconColor }) => (
             <div key={label} className="glass-card p-5 flex items-center justify-between">
               <div className="flex flex-col gap-1">
-                <p className="text-xs font-semibold text-white/50 uppercase tracking-wider">{label}</p>
+                <p className="text-xs font-black text-white uppercase tracking-wider">{label}</p>
                 <p className="text-2xl font-display font-black text-white">{value}</p>
-                <p className={`text-[10px] font-semibold ${subColor}`}>{sub}</p>
+                <p className={`text-[10px] font-bold ${subColor}`}>{sub}</p>
               </div>
               <div className={`w-10 h-10 rounded-xl ${bg} flex items-center justify-center`}>
                 <Icon className={`w-5 h-5 ${iconColor}`} />
@@ -233,25 +245,25 @@ export default function AdminDashboard() {
                   <div className="flex justify-between items-start flex-wrap gap-2 text-xs">
                     <div>
                       <p className="font-bold text-sm text-white font-mono">{o.tracking_number}</p>
-                      <p className="text-white/40">{o.customer_email}</p>
+                      <p className="text-white font-bold">{o.customer_email}</p>
                     </div>
                     <span className={ORDER_STATUS_CLASSES[o.status] ?? 'badge-gray'}>{o.status}</span>
                   </div>
-                  <div className="text-xs text-white/45 flex flex-col gap-1">
+                  <div className="text-xs text-white font-semibold flex flex-col gap-1">
                     {o.items.map((it, i) => <p key={i}>• {it.product_name} ×{it.quantity}</p>)}
                   </div>
                   {o.status === 'Pending' && (
                     <div className="bg-white/5 border border-white/8 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3">
                       <div className="flex gap-3 flex-wrap">
                         <div className="flex flex-col gap-0.5">
-                          <label htmlFor={`driver-select-${o.id}`} className="text-[10px] text-white/35">Driver</label>
+                          <label htmlFor={`driver-select-${o.id}`} className="text-[10px] text-white font-bold">Driver</label>
                           <select id={`driver-select-${o.id}`} value={selectedDriver} onChange={e => setSelectedDriver(e.target.value)} className="glass-input text-xs py-1.5 px-2">
                             <option value="">Select Driver</option>
                             {DRIVER_OPTIONS.map(d => <option key={d}>{d}</option>)}
                           </select>
                         </div>
                         <div className="flex flex-col gap-0.5">
-                          <label htmlFor={`vehicle-select-${o.id}`} className="text-[10px] text-white/35">Vehicle</label>
+                          <label htmlFor={`vehicle-select-${o.id}`} className="text-[10px] text-white font-bold">Vehicle</label>
                           <select id={`vehicle-select-${o.id}`} value={selectedVehicle} onChange={e => setSelectedVehicle(e.target.value)} className="glass-input text-xs py-1.5 px-2">
                             {vehicles.filter(v => v.status === 'Available').map(v => <option key={v.id} value={v.id}>{v.plate_number}</option>)}
                           </select>
@@ -262,7 +274,7 @@ export default function AdminDashboard() {
                   )}
                   {o.status === 'Assigned' && (
                     <div className="flex items-center justify-between bg-white/5 border border-white/8 rounded-xl p-3">
-                      <div className="text-xs text-white/40">
+                      <div className="text-xs text-white font-semibold">
                         <p>Driver: <strong className="text-white">{o.driver_name}</strong></p>
                         <p>Vehicle: <strong className="text-white">{o.vehicle_plate}</strong></p>
                       </div>
@@ -325,7 +337,7 @@ export default function AdminDashboard() {
             <div className="glass-card overflow-hidden">
               <table className="w-full text-sm border-collapse">
                 <thead>
-                  <tr className="border-b border-white/8 text-xs text-white/40 uppercase tracking-wider">
+                  <tr className="border-b border-white/8 text-xs text-white font-black uppercase tracking-wider">
                     {['SKU', 'Product', 'Category', 'Stock', 'Safety Level', 'Reorder At', 'Status'].map(h => (
                       <th key={h} className="px-5 py-3.5 text-left font-semibold">{h}</th>
                     ))}
@@ -337,12 +349,12 @@ export default function AdminDashboard() {
                     const isReorder = !isLow && p.stock_qty <= p.reorder_threshold;
                     return (
                       <tr key={p.id} className={`hover:bg-white/4 transition-colors ${isLow ? 'bg-danger/5' : ''}`}>
-                        <td className="px-5 py-3.5 font-mono text-xs font-semibold text-white/70">{p.sku}</td>
+                        <td className="px-5 py-3.5 font-mono text-xs font-bold text-white">{p.sku}</td>
                         <td className="px-5 py-3.5 font-bold text-white">{p.name}</td>
-                        <td className="px-5 py-3.5 font-semibold text-white/70">{p.category}</td>
+                        <td className="px-5 py-3.5 font-bold text-white">{p.category}</td>
                         <td className={`px-5 py-3.5 font-black ${isLow ? 'text-danger' : 'text-white'}`}>{p.stock_qty}</td>
-                        <td className="px-5 py-3.5 font-semibold text-white/70">{p.safety_level}</td>
-                        <td className="px-5 py-3.5 font-semibold text-white/70">{p.reorder_threshold}</td>
+                        <td className="px-5 py-3.5 font-bold text-white">{p.safety_level}</td>
+                        <td className="px-5 py-3.5 font-bold text-white">{p.reorder_threshold}</td>
                         <td className="px-5 py-3.5">
                           {isLow
                             ? <span className="badge-danger flex items-center gap-1 w-fit"><ShieldAlert className="w-3 h-3" /> Critical</span>
@@ -369,15 +381,15 @@ export default function AdminDashboard() {
                   <div className="flex justify-between items-start">
                     <div>
                       <p className="font-bold text-white text-base">{v.model}</p>
-                      <p className="font-mono text-xs text-white/40">{v.plate_number}</p>
+                      <p className="font-mono text-xs text-white font-bold">{v.plate_number}</p>
                     </div>
                     <span className={VEHICLE_STATUS_CLASSES[v.status] ?? 'badge-gray'}>{v.status}</span>
                   </div>
                   <div className="grid grid-cols-2 gap-3 border-t border-white/8 pt-4 text-xs">
-                    <div><p className="font-semibold text-white/60 mb-0.5">Capacity</p><p className="font-bold text-white">{v.capacity_liters.toLocaleString()}L</p></div>
-                    <div><p className="font-semibold text-white/60 mb-0.5">Fuel (L/100km)</p><p className="font-bold text-white">{v.fuel_usage}</p></div>
+                    <div><p className="font-bold text-white mb-0.5">Capacity</p><p className="font-black text-white">{v.capacity_liters.toLocaleString()}L</p></div>
+                    <div><p className="font-bold text-white mb-0.5">Fuel (L/100km)</p><p className="font-black text-white">{v.fuel_usage}</p></div>
                     <div className="col-span-2">
-                      <p className="font-semibold text-white/60 mb-0.5">Next Maintenance</p>
+                      <p className="font-bold text-white mb-0.5">Next Maintenance</p>
                       <p className={`font-bold flex items-center gap-1 ${new Date(v.maintenance_due_date) < new Date() ? 'text-danger' : 'text-white'}`}>
                         <Wrench className="w-3.5 h-3.5" /> {v.maintenance_due_date}
                       </p>
@@ -403,11 +415,11 @@ export default function AdminDashboard() {
                 <div className="h-48 flex items-end justify-between gap-3 pt-6">
                   {data.map(({ l, v }) => (
                     <div key={l} className="flex-1 flex flex-col items-center gap-2">
-                      <span className="text-[10px] font-bold text-white/50">{v}{unit}</span>
+                      <span className="text-[10px] font-black text-white">{v}{unit}</span>
                       <div className={`w-full rounded-t-lg bg-white/8 relative overflow-hidden ${getBarHeightClass(v, max)}`}>
                         <div className={`absolute inset-x-0 bottom-0 ${color} rounded-t-lg opacity-80 h-[60%]`} />
                       </div>
-                      <span className="text-xs font-semibold text-white/35">{l}</span>
+                      <span className="text-xs font-bold text-white">{l}</span>
                     </div>
                   ))}
                 </div>
@@ -427,27 +439,31 @@ export default function AdminDashboard() {
             </div>
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
-                <label htmlFor="product-name" className="text-xs font-semibold text-white/45 uppercase tracking-wider">Product Name</label>
+                <label htmlFor="product-name" className="text-xs font-bold text-white uppercase tracking-wider">Product Name</label>
                 <input id="product-name" type="text" value={newProductName} onChange={e => setNewProductName(e.target.value)} className="glass-input" placeholder="e.g. Spring Water" />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label htmlFor="product-sku" className="text-xs font-semibold text-white/45 uppercase tracking-wider">SKU</label>
+                <label htmlFor="product-sku" className="text-xs font-bold text-white uppercase tracking-wider">SKU</label>
                 <input id="product-sku" type="text" value={newProductSku} onChange={e => setNewProductSku(e.target.value)} className="glass-input" placeholder="e.g. SW-001" />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label htmlFor="product-category" className="text-xs font-semibold text-white/45 uppercase tracking-wider">Category</label>
+                <label htmlFor="product-category" className="text-xs font-bold text-white uppercase tracking-wider">Category</label>
                 <select id="product-category" value={newProductCategory} onChange={e => setNewProductCategory(e.target.value)} className="glass-input">
                   {['Drinking Water', 'Mineral Water', 'Bottled Water', 'Water Cooler', 'Water Tank'].map(cat => <option key={cat}>{cat}</option>)}
                 </select>
               </div>
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="product-image" className="text-xs font-bold text-white uppercase tracking-wider">Product Image</label>
+                <input id="product-image" type="file" title="Product Image" onChange={e => setNewProductImage(e.target.files?.[0] || null)} className="glass-input text-xs file:bg-primary file:border-0 file:rounded-md file:text-white file:px-2 file:py-1 file:mr-3" accept="image/*" />
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5">
-                  <label htmlFor="product-price" className="text-xs font-semibold text-white/45 uppercase tracking-wider">Price (Ksh)</label>
-                  <input id="product-price" type="number" min={0} value={newProductPrice} onChange={e => setNewProductPrice(+e.target.value)} className="glass-input" />
+                  <label htmlFor="product-price" className="text-xs font-bold text-white uppercase tracking-wider">Price (Ksh)</label>
+                  <input id="product-price" type="number" min={0} value={newProductPrice} onChange={e => setNewProductPrice(+e.target.value)} className="glass-input" placeholder="0" title="Price (Ksh)" />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label htmlFor="product-stock" className="text-xs font-semibold text-white/45 uppercase tracking-wider">Initial Stock</label>
-                  <input id="product-stock" type="number" min={0} value={newProductStock} onChange={e => setNewProductStock(+e.target.value)} className="glass-input" />
+                  <label htmlFor="product-stock" className="text-xs font-bold text-white uppercase tracking-wider">Initial Stock</label>
+                  <input id="product-stock" type="number" min={0} value={newProductStock} onChange={e => setNewProductStock(+e.target.value)} className="glass-input" placeholder="0" title="Initial Stock" />
                 </div>
               </div>
               <button onClick={addProduct} className="btn-primary py-4">Create Product</button>

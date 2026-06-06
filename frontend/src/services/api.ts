@@ -59,6 +59,9 @@ export const productsApi = {
   list: (params?: { search?: string; ordering?: string }) =>
     api.get('/products/', { params }),
   get: (id: string) => api.get(`/products/${id}/`),
+  create: (data: FormData) => api.post('/products/', data, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
 };
 
 // --- Orders ---
@@ -124,4 +127,16 @@ export const customersApi = {
     postal_code: string;
     is_default?: boolean;
   }) => api.post('/customers/addresses/', data),
+};
+
+// --- Public Communications ---
+export const communicationsApi = {
+  contactInquiry: (data: {
+    name: string;
+    email: string;
+    subject: string;
+    message: string;
+  }) => api.post('/communications/contact-inquiries/', data),
+  newsletterSubscribe: (email: string) =>
+    api.post('/communications/newsletter/', { email }),
 };

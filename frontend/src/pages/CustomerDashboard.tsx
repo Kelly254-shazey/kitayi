@@ -3,10 +3,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/auth';
 import { ordersApi, paymentsApi, productsApi, subscriptionsApi } from '../services/api';
 import {
-  Droplets, LogOut, ShoppingBag, CreditCard, Calendar, Truck,
+  LogOut, ShoppingBag, CreditCard, Calendar, Truck,
   MapPin, Plus, Play, Pause, X, Map, FileText, Sparkles,
   ChevronRight, ArrowRight, Home, Menu
 } from 'lucide-react';
+import BrandLogo from '../components/BrandLogo';
 
 type OrderItem = { product_name: string; quantity: number; total_price: number };
 type Order = { id: string; tracking_number: string; status: string; payment_status: string; total_amount: number; delivery_date: string; delivery_slot: string; items: OrderItem[]; created_at: string };
@@ -54,19 +55,18 @@ export default function CustomerDashboard() {
   const [subProduct, setSubProduct] = useState('');
   const [subQty, setSubQty] = useState(2);
   const [subFreq, setSubFreq] = useState('Weekly');
+  const [savingSub, setSavingSub] = useState(false);
 
   useEffect(() => {
-    productsApi.list().then(r => setProducts(Array.isArray(r.data) ? r.data : r.data?.results || []));
+    productsApi.list().then(r => {
+      const pList = Array.isArray(r.data) ? r.data : r.data?.results || [];
+      setProducts(pList);
+      if (pList.length > 0) setSubProduct(pList[0].id);
+    });
     ordersApi.list().then(r => setOrders(Array.isArray(r.data) ? r.data : r.data?.results || []));
     paymentsApi.list().then(r => setPayments(Array.isArray(r.data) ? r.data : r.data?.results || []));
     subscriptionsApi.list().then(r => setSubs(Array.isArray(r.data) ? r.data : r.data?.results || []));
   }, []);
-
-  useEffect(() => {
-    if (products.length > 0 && !subProduct) {
-      setSubProduct(products[0].id);
-    }
-  }, [products, subProduct]);
 
   // GPS tracker — only runs interval when In Transit; resets via cleanup
   useEffect(() => {
@@ -85,17 +85,40 @@ export default function CustomerDashboard() {
     setTracking(order);
   };
 
-  const toggleSub = (id: string) =>
-    setSubs(prev => prev.map(s => s.id === id ? { ...s, status: s.status === 'Active' ? 'Paused' : 'Active' } : s));
+  const toggleSub = async (id: string) => {
+    const current = subs.find(s => s.id === id);
+    if (!current) return;
+    const nextStatus = current.status === 'Active' ? 'Paused' : 'Active';
+    try {
+      const res = await subscriptionsApi.update(id, { status: nextStatus });
+      setSubs(prev => prev.map(s => s.id === id ? res.data : s));
+    } catch (error) {
+      console.error('Failed to update subscription:', error);
+      alert('Failed to update subscription. Please try again.');
+    }
+  };
 
-  const handleCreateSub = () => {
-    const prod = products.find(p => p.id === subProduct);
-    setSubs(prev => [{
-      id: `s${Date.now()}`, product_name: prod?.name ?? 'Water',
-      quantity: subQty, frequency: subFreq, status: 'Active',
-      next_delivery_date: '2026-06-12', billing_cycle: 'Prepaid',
-    }, ...prev]);
-    setNewSubOpen(false);
+  const handleCreateSub = async () => {
+    if (!subProduct) return;
+    const nextDeliveryDate = new Date();
+    nextDeliveryDate.setDate(nextDeliveryDate.getDate() + 7);
+    setSavingSub(true);
+    try {
+      const res = await subscriptionsApi.create({
+        product: subProduct,
+        quantity: subQty,
+        frequency: subFreq,
+        next_delivery_date: nextDeliveryDate.toISOString().slice(0, 10),
+        billing_cycle: 'Prepaid',
+      });
+      setSubs(prev => [res.data, ...prev]);
+      setNewSubOpen(false);
+    } catch (error) {
+      console.error('Failed to create subscription:', error);
+      alert('Failed to create subscription. Please try again.');
+    } finally {
+      setSavingSub(false);
+    }
   };
 
   const payNow = async (order: Order) => {
@@ -115,8 +138,8 @@ export default function CustomerDashboard() {
         className={`fixed inset-y-0 left-0 z-40 w-64 flex flex-col justify-between border-r border-slate-200 transition-transform duration-300 md:translate-x-0 md:static md:block ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} brand-surface`}>
         <div>
           <div className="h-16 px-5 flex items-center gap-2.5 border-b border-white/8">
-            <div className="w-8 h-8 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center">
-              <Droplets className="w-4 h-4 text-primary" />
+            <div className="w-10 h-10 rounded-xl bg-white overflow-hidden flex items-center justify-center">
+              <BrandLogo variant="mark" className="w-full h-full" />
             </div>
             <span className="font-display font-bold text-white text-sm tracking-tight">KITAYI<span className="text-primary">SOLUTIONS</span></span>
           </div>
@@ -418,7 +441,9 @@ export default function CustomerDashboard() {
                   </select>
                 </div>
               </div>
-              <button onClick={handleCreateSub} className="btn-primary py-4">Confirm Subscription</button>
+              <button onClick={handleCreateSub} disabled={savingSub || !subProduct} className="btn-primary py-4 disabled:opacity-60">
+                {savingSub ? 'Creating...' : 'Confirm Subscription'}
+              </button>
             </div>
           </div>
         </div>
