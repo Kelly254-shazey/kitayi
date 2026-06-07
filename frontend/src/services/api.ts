@@ -1,8 +1,12 @@
-import axios from 'axios';
+import axios, { type InternalAxiosRequestConfig } from 'axios';
 
-// Always use the Vite proxy path (/api/v1) so it works in both dev and Docker.
-// The absolute VITE_API_URL is only used for direct backend calls outside the proxy.
-const API_BASE_URL = '/api/v1';
+// Match the environment variable provided in CI/CD pipeline
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
+
+// Extend the Axios config type to include our custom property
+interface CustomRequestConfig extends InternalAxiosRequestConfig {
+  _retry?: boolean;
+}
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -27,22 +31,24 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config;
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    const originalRequest = error.config as CustomRequestConfig;
+    
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retry && !originalRequest.url?.includes('/auth/')) {
       originalRequest._retry = true;
       try {
         const refreshToken = localStorage.getItem('refresh_token');
+        
         if (refreshToken) {
           const res = await axios.post(`${API_BASE_URL}/auth/refresh/`, {
             refresh: refreshToken,
           });
           const newAccessToken = res.data.access;
           localStorage.setItem('access_token', newAccessToken);
-          originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
+          
+          originalRequest.headers?.set('Authorization', `Bearer ${newAccessToken}`);
           return api(originalRequest);
         }
       } catch {
-        // Clear auth details and redirect
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         window.location.href = '/login';
@@ -53,6 +59,18 @@ api.interceptors.response.use(
 );
 
 // ===== Real API Service Functions =====
+
+// --- Auth ---
+export const authApi = {
+  logout: async () => {
+    // 1. Always clear local storage first so the UI updates immediately
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    
+    // 2. Redirect to login
+    window.location.href = '/login';
+  },
+};
 
 // --- Products ---
 export const productsApi = {
