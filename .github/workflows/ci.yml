@@ -208,6 +208,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./backend
+          file: ./backend/Dockerfile
           push: true
           tags: |
             ghcr.io/${{ github.repository }}/backend:latest
@@ -219,6 +220,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./frontend
+          file: ./frontend/Dockerfile
           push: true
           tags: |
             ghcr.io/${{ github.repository }}/frontend:latest
