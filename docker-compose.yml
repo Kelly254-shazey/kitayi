@@ -20,6 +20,8 @@ services:
     depends_on:
       - db
       - redis
+    volumes:
+      - static_volume:/app/staticfiles
 
   frontend:
     build:
@@ -28,6 +30,9 @@ services:
         - VITE_API_URL=${VITE_API_URL:-/api/v1}
     ports:
       - "80:80"
+    volumes:
+      - static_volume:/usr/share/nginx/html/static
 
 volumes:
   postgres_data:
+  static_volume:
