@@ -19,8 +19,8 @@ export const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('access_token');
-    if (token && config.headers) {
-      config.headers['Authorization'] = `Bearer ${token}`;
+    if (token) {
+      config.headers?.set('Authorization', `Bearer ${token}`);
     }
     return config;
   },
@@ -62,7 +62,7 @@ api.interceptors.response.use(
 
 // --- Auth ---
 export const authApi = {
-  logout: async () => {
+  logout: () => {
     // 1. Always clear local storage first so the UI updates immediately
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
