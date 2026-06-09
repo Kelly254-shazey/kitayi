@@ -6,8 +6,12 @@ from datetime import timedelta
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 # SECURITY: Keep secret key in environment
-SECRET_KEY = config('DJANGO_SECRET_KEY', default='unsafe-dev-key-change-in-production')
-DEBUG = config('DJANGO_DEBUG', default=True, cast=bool)
+SECRET_KEY = config('DJANGO_SECRET_KEY', default=None)
+DEBUG = config('DJANGO_DEBUG', default=False, cast=bool)
+
+# Fail loudly if SECRET_KEY not provided
+if SECRET_KEY is None:
+    raise ValueError('DJANGO_SECRET_KEY environment variable must be set')
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
 
 # Installed Apps
@@ -51,6 +55,9 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # ✅ SECURITY: Custom middleware
+    'apps.common.middleware.RequestResponseLoggingMiddleware',
+    'apps.common.middleware.SecurityHeadersMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -138,6 +145,8 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.JSONRenderer',
     ),
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    # ✅ SECURITY: Enhanced exception handling
+    'EXCEPTION_HANDLER': 'apps.common.exceptions.custom_exception_handler',
     'DEFAULT_THROTTLE_CLASSES': (
         'rest_framework.throttling.AnonRateThrottle',
         'rest_framework.throttling.UserRateThrottle',
@@ -145,8 +154,10 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'anon': '100/hour',
         'user': '1000/hour',
-        'auth': '10/minute',
-        'payment': '30/hour',
+        'login': '5/hour',  # ✅ SECURITY: Very strict login
+        'register': '10/hour',  # ✅ SECURITY: Prevent spam registration
+        'password_reset': '3/hour',  # ✅ SECURITY: Prevent email bombing
+        'payment': '10/hour',  # ✅ SECURITY: Prevent duplicate charges
     },
 }
 
@@ -163,6 +174,33 @@ SIMPLE_JWT = {
 # ===== CORS Configuration =====
 CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='http://localhost:3000,http://localhost:8000', cast=Csv())
 CORS_ALLOW_CREDENTIALS = True
+
+# ===== Security Headers =====
+SECURE_SSL_REDIRECT = not DEBUG
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_HTTPONLY = False  # Frontend needs to read for CSRF
+CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='http://localhost:3000', cast=Csv())
+
+# HTTP Strict Transport Security (HSTS)
+SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0  # 1 year
+SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
+SECURE_HSTS_PRELOAD = not DEBUG
+
+# Content Security Policy (XSS Protection)
+SECURE_CONTENT_SECURITY_POLICY = {
+    'default-src': ("'self'",),
+    'script-src': ("'self'", "'unsafe-inline'"),
+    'style-src': ("'self'", "'unsafe-inline'"),
+    'img-src': ("'self'", "data:", "https:"),
+    'font-src': ("'self'",),
+    'connect-src': ("'self'", "https://api.kitayi.com"),
+}
+
+# Other security headers
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_SECURITY_POLICY_REPORT_ONLY = DEBUG
+X_FRAME_OPTIONS = 'DENY'
 
 # ===== Celery Configuration =====
 CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='redis://localhost:6379/0')

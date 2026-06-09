@@ -1,25 +1,32 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
+import type { Variants } from 'framer-motion';
 import {
   ArrowRight,
   Award,
-  CheckCircle2,
-  ChevronDown,
-  Clock,
   Droplets,
-  Mail,
-  MapPin,
-  Phone,
   ShieldCheck,
-  Star,
   Truck,
   Users,
-  Zap,
+  Activity,
+  Globe,
+  Lock,
+  Plus,
+  BadgeCheck,
+  Leaf,
+  FlaskConical,
+  ShoppingCart
 } from 'lucide-react';
+import {
+  AreaChart,
+  Area,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import BrandLogo from '../components/BrandLogo';
-import { communicationsApi, productsApi } from '../services/api';
+import { productsApi } from '../services/api';
 
 type Product = {
   id: string;
@@ -27,261 +34,215 @@ type Product = {
   category: string;
   price: number;
   stock_qty: number;
+  image_url?: string;
 };
 
 const STATS = [
-  { value: '10+', label: 'Years of Service', icon: Award },
-  { value: '50,000+', label: 'Happy Customers', icon: Users },
-  { value: '250,000+', label: 'Deliveries Done', icon: Truck },
-  { value: '100%', label: 'Quality Certified', icon: ShieldCheck },
+  { value: '15+', label: 'Years in Business', icon: Award, color: 'text-brand-primary' },
+  { value: '75k+', label: 'Happy Customers', icon: Users, color: 'text-brand-secondary' },
+  { value: '1M+', label: 'Litres Delivered', icon: Droplets, color: 'text-brand-primary' },
+  { value: 'WHO', label: 'Safety Standards', icon: ShieldCheck, color: 'text-emerald-500' },
+];
+
+const HERO_MESSAGES = ['Clean Water', 'Fast Delivery', 'Pure Quality', 'Safe Supply'];
+
+const ANALYTICS_DATA = [
+  { time: '00:00', volume: 4000 },
+  { time: '04:00', volume: 3000 },
+  { time: '08:00', volume: 2000 },
+  { time: '12:00', volume: 2780 },
+  { time: '16:00', volume: 1890 },
+  { time: '20:00', volume: 2390 },
+  { time: '23:59', volume: 3490 },
 ];
 
 const SERVICES = [
-  { title: 'Residential Supply', desc: 'Doorstep delivery of purified bottled water and 20L dispenser refills for homes.', icon: Droplets },
-  { title: 'Corporate & Industrial', desc: 'Scheduled bulk tanker deliveries for factories, hospitals, schools and offices.', icon: Award },
-  { title: 'Tanker Services', desc: 'Large-volume water delivery for construction sites and utility emergencies.', icon: Truck },
-  { title: 'Dispenser Refills', desc: 'Premium 20L purified bottle swaps for home and office hot/cold dispensers.', icon: ShieldCheck },
+  { 
+    title: 'Home Delivery', 
+    desc: 'Fresh and pure drinking water delivered right to your doorstep for your family.', 
+    icon: Droplets,
+    gradient: 'from-blue-500/20 to-cyan-500/20'
+  },
+  { 
+    title: 'Office Supply', 
+    desc: 'Reliable water solutions to keep your office and staff hydrated throughout the day.', 
+    icon: Globe,
+    gradient: 'from-blue-600/20 to-blue-400/20'
+  },
+  { 
+    title: 'Bulk Delivery', 
+    desc: 'Large capacity water tankers for construction, hotels, and big events.', 
+    icon: Truck,
+    gradient: 'from-blue-700/20 to-blue-500/20'
+  },
+  { 
+    title: 'Secure Payments', 
+    desc: 'Simple and safe payment options for easy and quick water ordering.', 
+    icon: Lock,
+    gradient: 'from-cyan-500/20 to-blue-500/20'
+  },
 ];
 
-const WHY = [
-  { title: 'Real-Time GPS Tracking', desc: 'Follow your delivery live on a map with precise ETA sent to your phone.', icon: MapPin },
-  { title: 'KEBS & WHO Certified', desc: 'Every litre passes rigorous lab testing to meet Kenya Bureau of Standards.', icon: ShieldCheck },
-  { title: 'Flexible Subscriptions', desc: 'Weekly, bi-weekly or monthly auto-delivery with autopay options.', icon: Clock },
-  { title: 'Secure Payments', desc: 'M-Pesa Daraja STK push, Stripe card, or PayPal - fully PCI-DSS compliant.', icon: Zap },
+const TRUST_MARKERS = [
+  { icon: BadgeCheck, title: 'KEBS Certified', desc: 'Standard GS 1234 compliance' },
+  { icon: FlaskConical, title: 'Lab Tested', desc: 'Rigorous 24-step purification' },
+  { icon: Leaf, title: 'Sustainable', desc: 'Eco-conscious logistics' },
 ];
 
-const TESTIMONIALS = [
-  { quote: 'Kitayi transformed how we manage water. Subscriptions work like clockwork and M-Pesa pay is instant.', author: 'Jane Mwangi', role: 'Property Manager, Kilimani Estates', stars: 5 },
-  { quote: 'The tanker arrived within 2 hours of booking. GPS tracking and the digital dashboard were seamless.', author: 'David Ochieng', role: 'Site Engineer, Landmark Builders', stars: 5 },
-  { quote: "Our hospital now has zero water shortage incidents thanks to Kitayi's corporate credit account.", author: 'Dr. Amina Khalid', role: 'Admin Director, Nairobi Clinic', stars: 5 },
-];
+const containerVariants: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1 }
+  }
+};
 
-const FAQS = [
-  { q: 'How do I schedule a recurring delivery?', a: 'Log in, go to Subscriptions, choose your product and frequency, and confirm auto-billing.' },
-  { q: 'What payment methods do you support?', a: 'M-Pesa STK Push, Stripe credit/debit cards, and PayPal. Corporate clients can apply for postpaid credit terms.' },
-  { q: 'Are deliveries tracked in real-time?', a: 'Yes. Once dispatched, you receive an SMS link to follow your truck live with a countdown ETA.' },
-  { q: 'Do you offer corporate credit accounts?', a: 'Yes. Commercial clients with a registered business ID can apply for postpaid credit limits via our finance team.' },
-  { q: 'What is the minimum tanker order?', a: 'Our minimum is 5,000 litres. We operate fleets up to 20,000L for industrial clients.' },
-];
+const itemVariants: Variants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] }
+  }
+};
 
 export default function LandingPage() {
-  const [activeFaq, setActiveFaq] = useState<number | null>(null);
-  const [subEmail, setSubEmail] = useState('');
-  const [subMsg, setSubMsg] = useState('');
-  const [submittingNewsletter, setSubmittingNewsletter] = useState(false);
+  const navigate = useNavigate();
+  const { scrollYProgress } = useScroll();
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
+  const heroScale = useTransform(scrollYProgress, [0, 0.2], [1, 0.98]);
+
+  const [heroMessageIndex, setHeroMessageIndex] = useState(0);
   const [quickProducts, setQuickProducts] = useState<Product[]>([]);
 
   useEffect(() => {
     productsApi.list({ ordering: 'price' })
       .then(res => {
         const data = Array.isArray(res.data) ? res.data : res.data?.results || [];
-        setQuickProducts(data.slice(0, 3));
+        setQuickProducts(data.slice(0, 4));
       })
-      .catch(error => {
-        console.error('Failed to load quick order products:', error);
-      });
+      .catch(console.error);
+
+    const timer = setInterval(() => {
+      setHeroMessageIndex(current => (current + 1) % HERO_MESSAGES.length);
+    }, 3000);
+    return () => clearInterval(timer);
   }, []);
 
-  const quickOrderItems = useMemo(() => {
-    const fallback = [
-      { id: 'fallback-1', name: 'Dispenser Refill 20L', category: 'Most Popular', price: 350, stock_qty: 0 },
-      { id: 'fallback-2', name: 'Bulk Tanker 5,000L', category: 'Best Value', price: 4500, stock_qty: 0 },
-      { id: 'fallback-3', name: 'Bottled Water 1L x 12', category: 'Catalog Item', price: 720, stock_qty: 0 },
-    ];
-
-    return (quickProducts.length ? quickProducts : fallback).map((product, index) => ({
-      ...product,
-      tag: index === 0 ? 'Most Popular' : index === 1 ? 'Best Value' : product.category,
-    }));
-  }, [quickProducts]);
-
-  const handleNewsletterSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setSubmittingNewsletter(true);
-    try {
-      await communicationsApi.newsletterSubscribe(subEmail);
-      setSubMsg("You're subscribed to Kitayi updates!");
-      setSubEmail('');
-    } catch (error) {
-      console.error('Newsletter signup failed:', error);
-      setSubMsg('Subscription failed. Please try again.');
-    } finally {
-      setSubmittingNewsletter(false);
-    }
-  };
-
   return (
-    <div className="page-shell">
+    <div className="page-shell relative transition-colors duration-500 min-h-screen">
       <Navbar />
 
-      <section className="relative overflow-hidden bg-hero-pattern pt-20">
-        <div className="brand-surface absolute inset-x-0 top-0 h-72 opacity-5 pointer-events-none" />
-        <div className="relative max-w-7xl mx-auto px-6 py-28 grid md:grid-cols-2 gap-16 items-center">
-          <div className="flex flex-col gap-7 animate-slide-up">
-            <span className="section-tag w-fit">
-              <ShieldCheck className="w-3.5 h-3.5" /> KEBS & WHO Certified
+      {/* Hero Section */}
+      <section className="relative min-h-screen flex items-center justify-center overflow-hidden section-padding pt-32">
+        <motion.div 
+          style={{ opacity: heroOpacity, scale: heroScale }}
+          className="content-container text-center relative z-10"
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 1, ease: "easeOut" }}
+            className="mb-8 inline-flex items-center gap-2 px-6 py-2.5 rounded-full glass-panel border-brand-primary/10"
+          >
+            <div className="w-2 h-2 rounded-full bg-brand-primary animate-pulse shadow-glow droplet-pulse" />
+            <span className="text-[10px] font-display font-black tracking-[0.4em] uppercase text-brand-primary dark:text-white/60">
+              Pure Water For Everyone
             </span>
-            <h1 className="text-5xl md:text-6xl font-display font-black text-ink leading-[1.08] tracking-tight">
-              Pure Water <br />
-              <span className="text-brand">Delivered</span>{' '}
-              <span className="text-cta">Fast</span>
-            </h1>
-            <p className="text-lg text-ink-secondary leading-relaxed max-w-lg">
-              Order bottled water, bulk tanker deliveries, and dispenser refills, then track your delivery live.
-              Kenya's most trusted water utility platform.
-            </p>
-            <div className="flex flex-wrap gap-3 mt-1">
-              <Link to="/pay-bill" className="btn-cta px-8 py-4 text-base">
-                Pay Kitayi Bill <ArrowRight className="w-5 h-5" />
-              </Link>
-              <Link to="/shop" className="btn-brand px-8 py-4 text-base">
-                Order Water <Droplets className="w-5 h-5" />
-              </Link>
+          </motion.div>
+
+          <h1 className="text-5xl md:text-7xl lg:text-8xl font-display font-black tracking-tight mb-8 text-brand-navy dark:text-white uppercase">
+            <span className="block mb-2">Pure Water.</span>
+            <div className="h-[1.2em] relative overflow-hidden flex justify-center">
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key={heroMessageIndex}
+                  initial={{ y: 40, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: -40, opacity: 0 }}
+                  transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                  className="text-premium-gradient absolute"
+                >
+                  {HERO_MESSAGES[heroMessageIndex]}
+                </motion.span>
+              </AnimatePresence>
             </div>
-            <div className="flex flex-wrap items-center gap-5">
-              {['PCI-DSS Secure', 'SSL Encrypted', 'KEBS Certified'].map(t => (
-                <span key={t} className="flex items-center gap-1.5 text-xs text-ink-muted">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-success" /> {t}
-                </span>
-              ))}
-            </div>
-          </div>
+          </h1>
 
-          <div className="relative">
-            <div className="card-md p-8 bg-brand rounded-2xl animate-float shadow-lg">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-14 h-14 rounded-xl bg-white flex items-center justify-center overflow-hidden">
-                  <BrandLogo variant="mark" className="w-full h-full" />
-                </div>
-                <div>
-                  <p className="text-sm text-white font-black">Quick Order</p>
-                  <p className="text-base text-white font-black">Kitayi Solutions Limited</p>
-                </div>
-              </div>
+          <motion.p 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, duration: 0.8 }}
+            className="text-lg md:text-xl text-ink dark:text-white/80 max-w-2xl mx-auto mb-12 leading-relaxed font-medium"
+          >
+            Kitayi delivers safe, clean, and high-quality water to your home and office. 
+            We are committed to providing reliable service every single day.
+          </motion.p>
 
-              <div className="flex flex-col gap-3 mb-6">
-                {quickOrderItems.map(item => (
-                  <Link
-                    to="/shop"
-                    key={item.id}
-                    className="flex min-h-[76px] items-center justify-between p-4 rounded-lg bg-white border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all group"
-                  >
-                    <div className="flex-1">
-                      <p className="text-sm text-slate-950 font-black leading-tight">{item.name}</p>
-                      {item.tag && (
-                        <span className="inline-block mt-1 text-xs text-orange-700 font-black bg-orange-100 px-2 py-1 rounded">
-                          {item.tag}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3 ml-3">
-                      <span className="text-sm font-black text-blue-700 whitespace-nowrap">
-                        Ksh {Number(item.price).toLocaleString()}
-                      </span>
-                      <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-blue-600 transition-colors shrink-0" />
-                    </div>
-                  </Link>
-                ))}
-              </div>
-
-              <Link
-                to="/shop"
-                className="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-semibold py-3.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
-              >
-                View Full Catalog <ArrowRight className="w-4 h-4" />
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="py-14 border-y border-base-200 bg-base-50">
-        <div className="max-w-7xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-6">
-          {STATS.map(({ value, label, icon: Icon }) => (
-            <div key={label} className="flex flex-col items-center text-center gap-3 py-4">
-              <div className="w-10 h-10 rounded-xl brand-surface flex items-center justify-center">
-                <Icon className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-3xl font-display font-black text-brand">{value}</span>
-              <span className="text-xs text-ink-muted font-medium uppercase tracking-wider">{label}</span>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section id="services" className="py-24 max-w-7xl mx-auto px-6">
-        <div className="text-center flex flex-col gap-4 mb-14">
-          <div className="section-tag mx-auto">Our Services</div>
-          <h2 className="text-4xl md:text-5xl font-display font-black text-ink">Water Solutions for Every Need</h2>
-          <p className="text-ink-secondary max-w-xl mx-auto leading-relaxed">
-            Tailored plans for residences, offices, factories, and public facilities.
-          </p>
-        </div>
-        <div className="grid md:grid-cols-4 gap-6">
-          {SERVICES.map(({ title, desc, icon: Icon }) => (
-            <Link
-              to="/services"
-              key={title}
-              className="card p-6 flex flex-col gap-4 hover:border-brand/30 hover:shadow-card-md hover:-translate-y-1 transition-all duration-300 group"
-            >
-              <div className="w-12 h-12 rounded-2xl brand-surface flex items-center justify-center">
-                <Icon className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="font-display font-bold text-base text-ink">{title}</h3>
-              <p className="text-sm text-ink-secondary leading-relaxed">{desc}</p>
-              <span className="flex items-center gap-1 text-cta text-xs font-semibold mt-auto opacity-0 group-hover:opacity-100 transition-opacity">
-                Learn more <ArrowRight className="w-3.5 h-3.5" />
-              </span>
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6, duration: 0.8 }}
+            className="flex flex-col sm:flex-row items-center justify-center gap-6"
+          >
+            <Link to="/register" className="btn-premium group px-12 py-5 text-lg">
+              Order Now
+              <ArrowRight className="w-5 h-5 ml-2 transition-transform group-hover:translate-x-1" />
             </Link>
-          ))}
-        </div>
-      </section>
+            <Link to="/services" className="btn-glass px-12 py-5 text-lg flex items-center justify-center">
+              Our Services
+              <Globe className="w-5 h-5 ml-2" />
+            </Link>
+          </motion.div>
+        </motion.div>
 
-      <section id="why-us" className="py-24 brand-surface-navy">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid md:grid-cols-2 gap-12 items-center mb-14">
-            <div className="flex flex-col gap-4">
-              <span className="text-cta font-bold text-sm tracking-widest uppercase">Why Kitayi</span>
-              <h2 className="text-4xl md:text-5xl font-display font-black text-white leading-tight">
-                Built for Enterprise.<br />Simple for Everyone.
-              </h2>
+        {/* Liquid Wave Decor */}
+        <div className="liquid-wave opacity-30 dark:opacity-10" />
+
+        {/* Parallax Water Elements */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <motion.div 
+            animate={{ y: [0, -30, 0], rotate: [6, 8, 6] }}
+            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute top-[15%] right-[5%] hidden lg:block"
+          >
+            <div className="glass-card p-6 w-72 shadow-premium">
+              <div className="flex items-center justify-between mb-6">
+                <div className="w-12 h-12 rounded-2xl bg-brand-primary/10 flex items-center justify-center droplet-pulse"><Activity className="w-6 h-6 text-brand-primary" /></div>
+                <span className="text-[10px] font-black text-brand-primary/30 uppercase tracking-widest font-mono-data">NODE-01</span>
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-brand-primary/40 dark:text-white/40 block mb-1 font-mono-data">Water Pressure</span>
+              <span className="font-mono-data text-3xl font-black text-brand-navy dark:text-white">4.21 BAR</span>
             </div>
-            <p className="text-white/60 text-lg leading-relaxed">
-              Cloud dispatch, real-time GPS, and secure mobile wallets make water delivery as reliable as a tap.
-            </p>
-          </div>
-          <div className="grid md:grid-cols-4 gap-6">
-            {WHY.map(({ title, desc, icon: Icon }) => (
-              <div key={title} className="bg-white/8 border border-white/12 rounded-2xl p-6 flex flex-col gap-4">
-                <div className="w-11 h-11 rounded-xl bg-cta/20 border border-cta/30 flex items-center justify-center">
-                  <Icon className="w-5 h-5 text-cta" />
-                </div>
-                <h3 className="font-display font-bold text-sm text-white">{title}</h3>
-                <p className="text-xs text-white/75 leading-relaxed">{desc}</p>
-              </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Authority Stats Row */}
+      <section className="section-padding relative overflow-hidden bg-white dark:bg-brand-black/40 border-y border-brand-primary/5">
+        <div className="content-container">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+            {STATS.map((stat, i) => (
+              <motion.div key={i} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={itemVariants} className="stat-card group hover:border-brand-primary/40 transition-all border-none shadow-none">
+                <stat.icon className={`w-6 h-6 mb-4 ${stat.color} transition-transform group-hover:scale-110`} />
+                <span className="stat-value text-4xl text-brand-navy dark:text-white font-mono-data">{stat.value}</span>
+                <span className="stat-label text-brand-primary/60 dark:text-white/60 font-black uppercase tracking-widest">{stat.label}</span>
+              </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="py-24 bg-base-50">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center flex flex-col gap-4 mb-14">
-            <div className="section-tag mx-auto">Testimonials</div>
-            <h2 className="text-4xl font-display font-black text-ink">Trusted by Thousands of Kenyans</h2>
-          </div>
-          <div className="grid md:grid-cols-3 gap-6">
-            {TESTIMONIALS.map(({ quote, author, role, stars }) => (
-              <div key={author} className="card p-7 flex flex-col gap-5 justify-between hover:shadow-card-md transition-shadow">
-                <div className="flex gap-0.5">
-                  {Array.from({ length: stars }).map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-warning text-warning" />
-                  ))}
-                </div>
-                <p className="text-sm text-ink-secondary leading-relaxed italic">"{quote}"</p>
-                <div>
-                  <p className="text-sm font-bold text-ink">{author}</p>
-                  <p className="text-xs text-ink-muted">{role}</p>
+      {/* Trust & Certification Section */}
+      <section className="py-20 bg-brand-soft/20 dark:bg-white/[0.01]">
+        <div className="content-container">
+          <div className="flex flex-wrap items-center justify-center gap-12 md:gap-24 opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-700">
+            {TRUST_MARKERS.map((marker, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <marker.icon className="w-8 h-8 text-brand-primary" />
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-brand-navy dark:text-white">{marker.title}</span>
+                  <span className="text-[9px] font-bold text-brand-primary/60 dark:text-white/60">{marker.desc}</span>
                 </div>
               </div>
             ))}
@@ -289,82 +250,118 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="faq" className="py-24 max-w-3xl mx-auto px-6">
-        <div className="text-center flex flex-col gap-4 mb-14">
-          <div className="section-tag mx-auto">FAQ</div>
-          <h2 className="text-4xl font-display font-black text-ink">Frequently Asked Questions</h2>
-        </div>
-        <div className="flex flex-col gap-3">
-          {FAQS.map((faq, i) => (
-            <div key={faq.q} className={`card overflow-hidden transition-all ${activeFaq === i ? 'border-brand/30' : ''}`}>
-              <button
-                className="w-full px-6 py-4 flex items-center justify-between text-left font-semibold text-sm text-ink hover:text-brand transition-colors"
-                onClick={() => setActiveFaq(activeFaq === i ? null : i)}
+      {/* Product Repository */}
+      <section className="section-padding relative">
+        <div className="content-container">
+          <div className="flex flex-col md:flex-row items-end justify-between mb-24 gap-8">
+            <div className="max-w-xl text-left">
+              <span className="text-[10px] font-black text-brand-primary uppercase tracking-[0.4em] mb-4 block">Our Products</span>
+              <h2 className="text-4xl md:text-7xl font-display font-black text-brand-navy dark:text-white uppercase tracking-tighter leading-none mb-6">Safe <br/><span className="text-premium-gradient">Water.</span></h2>
+              <p className="text-lg text-ink dark:text-white/80 font-medium">Browse our products and find the perfect water solution for you.</p>
+            </div>
+            <Link to="/shop" className="btn-glass px-10 py-4 flex items-center gap-3">
+              Shop Water <ShoppingCart className="w-4 h-4" />
+            </Link>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {quickProducts.map((p, i) => (
+              <motion.div
+                key={p.id}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+                onClick={() => navigate('/shop')}
+                className="glass-card flex flex-col group cursor-pointer overflow-hidden border-brand-primary/5 hover:border-brand-primary/30 transition-all shadow-none bg-white/60 dark:bg-white/5"
               >
-                <span>{faq.q}</span>
-                <ChevronDown className={`w-4 h-4 text-ink-muted transition-transform duration-300 shrink-0 ml-4 ${activeFaq === i ? 'rotate-180 text-brand' : ''}`} />
-              </button>
-              {activeFaq === i && (
-                <div className="px-6 pb-5 text-sm text-ink-secondary leading-relaxed border-t border-base-100 pt-4 animate-fade-in">
-                  {faq.a}
+                <div className="h-56 relative overflow-hidden">
+                  <img src={p.image_url} alt={p.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                    onError={e => e.currentTarget.src = 'https://images.unsplash.com/photo-1548839133-9aa08246bc61?w=800'} />
+                  <div className="absolute inset-0 bg-gradient-to-t from-brand-primary/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="absolute top-4 right-4 bg-brand-primary/10 dark:bg-brand-primary/20 backdrop-blur-md border border-brand-primary/20 px-3 py-1.5 rounded-full">
+                    <span className="text-[9px] font-black text-brand-primary dark:text-white uppercase tracking-widest">{p.category}</span>
+                  </div>
                 </div>
-              )}
-            </div>
-          ))}
+                <div className="p-8 flex flex-col gap-6 flex-1">
+                  <div>
+                    <h3 className="text-xl font-display font-black text-brand-navy dark:text-white uppercase tracking-tight mb-1">{p.name}</h3>
+                    <p className="text-[10px] font-bold text-brand-primary/60 dark:text-white/50 uppercase tracking-widest font-mono-data font-black">Batch Ref: {p.id.slice(0,8)}</p>
+                  </div>
+                  <div className="flex items-center justify-between mt-auto">
+                    <span className="text-2xl font-display font-black text-brand-primary dark:text-white font-mono-data tracking-tighter uppercase">Ksh {p.price.toLocaleString()}</span>
+                    <div className="w-10 h-10 rounded-xl bg-premium-gradient flex items-center justify-center shadow-glow opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
+                      <Plus className="text-white w-5 h-5" />
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </section>
 
-      <section id="contact" className="py-24 max-w-7xl mx-auto px-6">
-        <div className="card-md p-10 md:p-14">
-          <div className="grid md:grid-cols-2 gap-14">
-            <div className="flex flex-col gap-6">
-              <div>
-                <div className="section-tag w-fit mb-4">Get In Touch</div>
-                <h2 className="text-3xl font-display font-black text-ink mb-3">Emergency Delivery Helpline</h2>
-                <p className="text-ink-secondary leading-relaxed">
-                  Bulk orders, corporate accounts, or emergency deliveries - available 24/7.
-                </p>
+      {/* Infrastructure Telemetry */}
+      <section className="section-padding bg-brand-soft/20 dark:bg-white/[0.01]">
+        <div className="content-container">
+          <div className="grid lg:grid-cols-2 gap-24 items-center">
+            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={containerVariants}>
+              <span className="text-[10px] font-display font-black text-brand-primary uppercase tracking-[0.4em] mb-4 block text-liquid-shimmer">Reliable Delivery</span>
+              <h2 className="text-4xl md:text-7xl font-display font-black text-brand-navy dark:text-white uppercase tracking-tighter leading-none mb-8">Always <br/><span className="text-premium-gradient">On Time.</span></h2>
+              <p className="text-lg text-ink dark:text-white/80 font-medium mb-12 max-w-lg leading-relaxed">
+                Track your delivery in real-time and enjoy peace of mind knowing your 
+                water is coming from a trusted and certified source.
+              </p>
+              <div className="grid grid-cols-2 gap-8 font-mono-data">
+                <div><p className="text-4xl font-black text-brand-primary dark:text-white uppercase">100%</p><p className="text-[10px] text-brand-primary/60 dark:text-white/40 uppercase font-black tracking-widest">Reliability</p></div>
+                <div><p className="text-4xl font-black text-brand-primary dark:text-white uppercase">&lt;10MS</p><p className="text-[10px] text-brand-primary/60 dark:text-white/40 uppercase font-black tracking-widest">Fast Service</p></div>
               </div>
-              <div className="flex flex-col gap-3">
-                {[
-                  { icon: Phone, text: '+254 700 000 000', href: 'tel:+254700000000' },
-                  { icon: Mail, text: 'support@kitayisolutions.com', href: 'mailto:support@kitayisolutions.com' },
-                  { icon: MapPin, text: 'Industrial Area, Nairobi, Kenya', href: '#' },
-                ].map(({ icon: Icon, text, href }) => (
-                  <a key={text} href={href} className="flex items-center gap-3 text-sm text-ink-secondary hover:text-brand transition-colors">
-                    <div className="w-9 h-9 rounded-xl brand-surface flex items-center justify-center shrink-0">
-                      <Icon className="w-4 h-4 text-white" />
-                    </div>
-                    {text}
-                  </a>
-                ))}
-              </div>
-            </div>
-            <div className="flex flex-col gap-5">
-              <h3 className="font-display font-bold text-lg text-ink">Stay Updated</h3>
-              <p className="text-sm text-ink-secondary">Subscribe for promotions, quality updates, and delivery alerts.</p>
-              {subMsg ? (
-                <div className={subMsg.includes('failed') ? 'alert-danger text-sm' : 'alert-success text-sm'}>{subMsg}</div>
-              ) : (
-                <form onSubmit={handleNewsletterSubmit} className="flex flex-col gap-3">
-                  <input
-                    type="email"
-                    value={subEmail}
-                    onChange={e => setSubEmail(e.target.value)}
-                    placeholder="Enter your email address"
-                    className="form-input"
-                    required
-                  />
-                  <button type="submit" disabled={submittingNewsletter} className="btn-cta py-3.5 disabled:opacity-60">
-                    {submittingNewsletter ? 'Subscribing...' : 'Subscribe'} <ArrowRight className="w-4 h-4" />
-                  </button>
-                </form>
-              )}
-              <Link to="/pay-bill" className="btn-ghost py-3.5 text-sm text-center mt-1">
-                Pay Your Bill Without Logging In
-              </Link>
+            </motion.div>
+            <div className="glass-card p-10 h-[450px] relative overflow-hidden bg-white/40 dark:bg-white/5 border-brand-primary/5 shadow-none">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={ANALYTICS_DATA}>
+                  <defs><linearGradient id="cV" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#2563eb" stopOpacity={0.2}/><stop offset="95%" stopColor="#2563eb" stopOpacity={0}/></linearGradient></defs>
+                  <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '16px' }} />
+                  <Area type="monotone" dataKey="volume" stroke="#2563eb" strokeWidth={4} fill="url(#cV)" />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Sustainable Services */}
+      <section className="section-padding">
+        <div className="content-container">
+          <div className="text-center mb-32">
+            <h2 className="text-4xl md:text-8xl font-display font-black text-brand-navy dark:text-white uppercase tracking-tighter leading-none mb-8">Pure Solutions.</h2>
+            <p className="text-ink dark:text-white/80 max-w-2xl mx-auto text-xl font-medium uppercase font-display">Providing safe and clean water since 2014.</p>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {SERVICES.map((s, i) => (
+              <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }} className="glass-card p-10 group relative overflow-hidden bg-white/60 dark:bg-white/5 border-brand-primary/5 shadow-none">
+                <div className={`absolute -top-10 -right-10 w-40 h-40 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-br ${s.gradient}`} />
+                <s.icon className="w-12 h-12 text-brand-primary mb-10 transition-transform group-hover:scale-110 droplet-pulse" />
+                <h3 className="text-2xl font-display font-black text-brand-navy dark:text-white mb-4 uppercase tracking-tight leading-none">{s.title}</h3>
+                <p className="text-sm text-ink/80 dark:text-white/60 leading-relaxed font-semibold uppercase">{s.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Premium Footer CTA */}
+      <section className="section-padding pb-32">
+        <div className="content-container text-center">
+          <motion.div initial={{ opacity: 0, scale: 0.98 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} className="glass-panel p-20 md:p-32 rounded-[64px] relative overflow-hidden bg-brand-primary text-white border-none shadow-premium">
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-white/20 blur-[150px] -z-10 animate-pulse-slow" />
+            <h2 className="text-5xl md:text-8xl font-display font-black uppercase tracking-tighter mb-10 leading-none">Order Today.</h2>
+            <p className="text-2xl text-white/60 mb-16 max-w-3xl mx-auto font-medium uppercase font-display">Join thousands of families and businesses who trust Kitayi.</p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-8">
+              <Link to="/register" className="bg-white text-brand-primary px-16 py-6 rounded-2xl uppercase tracking-widest font-black text-xl hover:scale-105 transition-transform">Sign Up Now</Link>
+              <Link to="/contact" className="border-2 border-white/30 text-white px-16 py-6 rounded-2xl uppercase tracking-widest font-black text-xl hover:bg-white/10 transition-colors">Contact Us</Link>
+            </div>
+          </motion.div>
         </div>
       </section>
 

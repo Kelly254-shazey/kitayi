@@ -13,21 +13,35 @@ export const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true, // ✅ SECURITY: Send cookies with requests
 });
 
-// Inject Access Token to outgoing requests
+// ===== CSRF Token Injection =====
+// ✅ SECURITY: Add CSRF token to all state-changing requests
 api.interceptors.request.use(
   (config) => {
+    // Get CSRF token from meta tag or cookie
+    const csrfToken = 
+      document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+      getCookie('csrftoken');
+    
+    if (csrfToken && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(config.method?.toUpperCase() || '')) {
+      config.headers['X-CSRFToken'] = csrfToken;
+    }
+    
+    // Inject Access Token to outgoing requests (from httpOnly cookie if available)
     const token = localStorage.getItem('access_token');
     if (token) {
       config.headers?.set('Authorization', `Bearer ${token}`);
     }
+    
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// Auto-refresh JWT Access Token on 401 response
+// ===== Auto-refresh JWT Access Token =====
+// ✅ SECURITY: Automatic token refresh with proper error handling
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -41,7 +55,10 @@ api.interceptors.response.use(
         if (refreshToken) {
           const res = await axios.post(`${API_BASE_URL}/auth/refresh/`, {
             refresh: refreshToken,
+          }, {
+            withCredentials: true,
           });
+          
           const newAccessToken = res.data.access;
           localStorage.setItem('access_token', newAccessToken);
           
@@ -49,25 +66,37 @@ api.interceptors.response.use(
           return api(originalRequest);
         }
       } catch {
+        // Token refresh failed - clear auth and redirect to login
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         window.location.href = '/login';
       }
     }
+    
     return Promise.reject(error);
   }
 );
+
+// ===== Utility Functions =====
+function getCookie(name: string): string | null {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
+  return null;
+}
 
 // ===== Real API Service Functions =====
 
 // --- Auth ---
 export const authApi = {
   logout: () => {
-    // 1. Always clear local storage first so the UI updates immediately
+    // ✅ SECURITY: Clear tokens and redirect
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     
-    // 2. Redirect to login
+    // Call backend logout endpoint to clear refresh token
+    api.post('/auth/logout/', {}).catch(() => {});
+    
     window.location.href = '/login';
   },
 };

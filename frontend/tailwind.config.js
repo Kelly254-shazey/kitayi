@@ -1,72 +1,83 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
-        // 30% brand
+        // Water Company Identity (Blue & White focus)
         brand: {
-          DEFAULT: "#1B4FD8",
-          dark:    "#1239A6",
-          light:   "#EFF4FF",
-          teal:    "#0D9488",
-          navy:    "#0F2B6B",
+          DEFAULT: "#2563eb", // Trusted Primary Blue
+          primary: "#2563eb",
+          secondary: "#0ea5e9", // Sky/Water Blue
+          light:   "#f8fafc", // Clean Surface
+          soft:    "#eff6ff", // Very Light Blue
+          cyan:    "#06b6d4", // Action Cyan
+          navy:    "#1e40af", // Deep Trusted Blue
+          dark:    "#0f172a", // Dark Mode Base
+          black:   "#020617", // Ultra Premium Dark
         },
-        "brand-navy": "#0F2B6B",
-        // alias so dark-UI pages can use 'primary' instead of 'brand'
         primary: {
-          DEFAULT: "#1B4FD8",
-          dark:    "#1239A6",
-          light:   "#EFF4FF",
+          DEFAULT: "#2563eb",
+          dark:    "#1e3a8a",
+          light:   "#dbeafe",
         },
-        // 10% CTA cyan
         cta: {
-          DEFAULT: "#06B6D4",
-          hover:   "#0891B2",
-          dark:    "#0E7490",
-          light:   "#ECFEFF",
+          DEFAULT: "#0ea5e9",
+          hover:   "#0284c7",
+          dark:    "#0369a1",
         },
-        // Semantic
-        success: { DEFAULT: "#10B981", light: "#D1FAE5" },
-        warning: { DEFAULT: "#F59E0B", light: "#FEF3C7" },
-        danger:  { DEFAULT: "#EF4444", light: "#FEE2E2" },
-        // 60% white base
         ink: {
-          DEFAULT: "#0F172A",
+          DEFAULT: "#0f172a",
           secondary: "#334155",
-          muted:     "#64748B",
+          muted:     "#64748b",
         },
         base: {
-          50:  "#F8FAFC",
+          50: "#F8FAFC",
           100: "#F1F5F9",
           200: "#E2E8F0",
           300: "#CBD5E1",
         },
       },
       fontFamily: {
-        sans:    ["Inter", "sans-serif"],
-        display: ["Manrope", "sans-serif"],
+        sans: ["Geist Sans", "Inter", "-apple-system", "BlinkMacSystemFont", "sans-serif"],
+        display: ["-apple-system", "BlinkMacSystemFont", "SF Pro Display", "SF Pro Text", "Helvetica Neue", "Arial", "sans-serif"],
+        mono: ["JetBrains Mono", "IBM Plex Mono", "monospace"],
+      },
+      backdropBlur: {
+        premium: '24px',
+        elite: '40px',
       },
       boxShadow: {
-        card:       "0 1px 3px rgba(15,23,42,0.06), 0 4px 16px rgba(15,23,42,0.04)",
-        "card-md":  "0 4px 12px rgba(15,23,42,0.07), 0 12px 32px rgba(15,23,42,0.05)",
-        brand:      "0 4px 20px rgba(27,79,216,0.25)",
-        cta:        "0 4px 16px rgba(6,182,212,0.35)",
-        "cta-lg":   "0 6px 28px rgba(6,182,212,0.45)",
-      },
-      animation: {
-        "fade-in":  "fadeIn 0.35s ease-out",
-        "slide-up": "slideUp 0.4s ease-out",
-        "float":    "float 6s ease-in-out infinite",
-      },
-      keyframes: {
-        fadeIn:  { from: { opacity: "0" }, to: { opacity: "1" } },
-        slideUp: { from: { opacity: "0", transform: "translateY(16px)" }, to: { opacity: "1", transform: "translateY(0)" } },
-        float:   { "0%,100%": { transform: "translateY(0)" }, "50%": { transform: "translateY(-10px)" } },
+        premium: "0 20px 50px -12px rgba(37, 99, 235, 0.15)",
+        glow: "0 0 20px rgba(37, 99, 235, 0.4)",
+        card: "0 1px 3px rgba(15,23,42,0.06), 0 4px 16px rgba(15,23,42,0.04)",
       },
       backgroundImage: {
-        "hero-pattern": "linear-gradient(180deg, rgba(27,79,216,0.05) 0%, rgba(255,255,255,0) 360px), #ffffff",
-        "grid-track": "linear-gradient(rgba(27,79,216,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(13,148,136,0.12) 1px, transparent 1px)",
+        "water-mesh": "radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.05) 0, transparent 50%), radial-gradient(at 100% 100%, rgba(14, 165, 233, 0.05) 0, transparent 50%)",
+        "premium-gradient": "linear-gradient(135deg, #2563eb, #0ea5e9)",
+        "glass-gradient": "linear-gradient(135deg, rgba(255,255,255,0.4), rgba(255,255,255,0.1))",
+      },
+      animation: {
+        "wave": "wave 8s ease-in-out infinite",
+        "float": "float 6s ease-in-out infinite",
+        "pulse-slow": "pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        "mesh": "mesh 15s ease-in-out infinite",
+      },
+      keyframes: {
+        wave: {
+          "0%, 100%": { transform: "translateY(0) rotate(0deg)" },
+          "50%": { transform: "translateY(-20px) rotate(2deg)" },
+        },
+        float: {
+          "0%,100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-12px)" },
+        },
+        mesh: {
+          "0%, 100%": { transform: "translate(0, 0) scale(1)" },
+          "33%": { transform: "translate(30px, -50px) scale(1.05)" },
+          "66%": { transform: "translate(-20px, 20px) scale(0.95)" },
+        },
       },
     },
   },

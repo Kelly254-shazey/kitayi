@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/auth';
-import { ordersApi, paymentsApi, productsApi, subscriptionsApi } from '../services/api';
+import { ordersApi, paymentsApi, productsApi, subscriptionsApi, deliveriesApi } from '../services/api';
 import {
   LogOut, ShoppingBag, CreditCard, Calendar, Truck,
-  MapPin, Plus, Play, Pause, X, Map, FileText, Sparkles,
+  MapPin, Plus, Play, Pause, X, Map, FileText, Sparkles, ChevronLeft,
   ChevronRight, ArrowRight, Home, Menu
 } from 'lucide-react';
 import BrandLogo from '../components/BrandLogo';
@@ -57,6 +57,9 @@ export default function CustomerDashboard() {
   const [subFreq, setSubFreq] = useState('Weekly');
   const [savingSub, setSavingSub] = useState(false);
 
+  const [orderPage, setOrderPage] = useState(1);
+  const ordersPerPage = 3;
+
   useEffect(() => {
     productsApi.list().then(r => {
       const pList = Array.isArray(r.data) ? r.data : r.data?.results || [];
@@ -67,6 +70,9 @@ export default function CustomerDashboard() {
     paymentsApi.list().then(r => setPayments(Array.isArray(r.data) ? r.data : r.data?.results || []));
     subscriptionsApi.list().then(r => setSubs(Array.isArray(r.data) ? r.data : r.data?.results || []));
   }, []);
+
+  const totalOrderPages = Math.ceil(orders.length / ordersPerPage);
+  const paginatedOrders = orders.slice((orderPage - 1) * ordersPerPage, orderPage * ordersPerPage);
 
   // GPS tracker — only runs interval when In Transit; resets via cleanup
   useEffect(() => {
@@ -121,6 +127,17 @@ export default function CustomerDashboard() {
     }
   };
 
+  const confirmDelivery = async (orderId: string) => {
+    try {
+      await deliveriesApi.updateStatus(orderId, 'Delivered');
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'Delivered' } : o));
+      setTracking(null);
+    } catch (error) {
+      console.error('Failed to confirm delivery:', error);
+      alert('Failed to confirm delivery. Please try again.');
+    }
+  };
+
   const payNow = async (order: Order) => {
     try {
       await paymentsApi.mpesaPush(order.id);
@@ -132,7 +149,7 @@ export default function CustomerDashboard() {
   };
 
   return (
-    <div className="page-shell min-h-screen flex">
+    <div className="page-shell flex">
       {/* Sidebar */}
       <aside
         className={`fixed inset-y-0 left-0 z-40 w-64 flex flex-col justify-between border-r border-slate-200 transition-transform duration-300 md:translate-x-0 md:static md:block ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} brand-surface`}>
@@ -189,30 +206,35 @@ export default function CustomerDashboard() {
           {/* OVERVIEW */}
           {tab === 'overview' && (
             <>
-              <div className="glass-card p-6 bg-gradient-to-r from-primary/20 to-cyan-500/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="glass-card p-5 bg-gradient-to-r from-primary/20 to-cyan-500/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-widest">
                     <Sparkles className="w-3.5 h-3.5" /> Welcome back
                   </div>
-                  <h3 className="font-display font-black text-2xl text-white">{user?.full_name}</h3>
+                  <h3 className="font-display font-black text-xl text-white">{user?.full_name}</h3>
                     <p className="font-semibold text-white/60 text-sm">Use code <strong className="text-primary">WELCOME10</strong> for 10% off your next order.</p>
                 </div>
-                <button onClick={() => navigate('/shop')} className="btn-primary px-6 py-3 shrink-0">
+                <button onClick={() => navigate('/shop')} className="btn-primary px-5 py-2.5 shrink-0 text-xs">
                   Order Water <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {[  
-                  { label: 'Account Balance', value: 'Ksh 0.00', sub: 'No outstanding balance' },
-                  { label: 'Active Orders', value: orders.filter(o => !['Delivered', 'Cancelled'].includes(o.status)).length, sub: 'In progress' },
-                  { label: 'Subscriptions', value: subs.filter(s => s.status === 'Active').length, sub: 'Active plans' },
-                  { label: 'Total Deliveries', value: orders.filter(o => o.status === 'Delivered').length, sub: 'Completed' },
-                ].map(({ label, value, sub }) => (
-                  <div key={label} className="glass-card p-5 flex flex-col gap-1">
-                    <p className="text-xs font-semibold text-white/50 uppercase tracking-wider">{label}</p>
-                    <p className="text-2xl font-display font-black text-white">{value}</p>
-                    <p className="text-[10px] font-semibold text-white/60">{sub}</p>
+                {[
+                  { label: 'Balance', value: 'Ksh 0.00', sub: 'No balance', icon: CreditCard },
+                  { label: 'Active Orders', value: orders.filter(o => !['Delivered', 'Cancelled'].includes(o.status)).length, sub: 'In progress', icon: ShoppingBag },
+                  { label: 'Subscriptions', value: subs.filter(s => s.status === 'Active').length, sub: 'Active plans', icon: Calendar },
+                  { label: 'Total Deliveries', value: orders.filter(o => o.status === 'Delivered').length, sub: 'Completed', icon: Truck },
+                ].map(({ label, value, sub, icon: Icon }) => (
+                  <div key={label} className="glass-card p-5 flex items-center justify-between group hover:border-primary/30 transition-all">
+                    <div className="flex flex-col gap-1">
+                      <p className="text-xs font-semibold text-white/50 uppercase tracking-wider">{label}</p>
+                      <p className="text-2xl font-display font-black text-white">{value}</p>
+                      <p className="text-[10px] font-semibold text-white/60">{sub}</p>
+                    </div>
+                    <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-primary group-hover:bg-primary/20 transition-all">
+                      <Icon className="w-5 h-5" />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -250,7 +272,7 @@ export default function CustomerDashboard() {
             <div className="grid lg:grid-cols-3 gap-6 items-start">
               <div className="lg:col-span-2 flex flex-col gap-4">
                 <h3 className="font-display font-bold text-white">Order History</h3>
-                {orders.map(o => (
+                {paginatedOrders.map(o => (
                   <div key={o.id} className={`glass-card p-5 flex flex-col gap-4 transition-all ${tracking?.id === o.id ? 'border-primary/40' : ''}`}>
                     <div className="flex justify-between items-start flex-wrap gap-2">
                       <div>
@@ -272,11 +294,16 @@ export default function CustomerDashboard() {
                     </div>
                     <div className="flex justify-between items-center border-t border-white/6 pt-3">
                       <span className="font-display font-black text-sm text-white">Ksh {o.total_amount.toLocaleString()}</span>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-wrap">
                         {o.status === 'In Transit' && (
-                          <button onClick={() => startTracking(o)} className="btn-primary text-xs px-3 py-1.5">
-                            <Map className="w-3.5 h-3.5" /> Track
-                          </button>
+                          <>
+                            <button onClick={() => startTracking(o)} className="btn-primary text-xs px-3 py-1.5">
+                              <Map className="w-3.5 h-3.5" /> Track
+                            </button>
+                            <button onClick={() => confirmDelivery(o.id)} className="btn-success text-xs px-3 py-1.5">
+                              ✓ Confirm Arrived
+                            </button>
+                          </>
                         )}
                         {o.payment_status === 'Pending' && (
                           <button onClick={() => payNow(o)} className="btn-success text-xs px-3 py-1.5">Pay Now</button>
@@ -285,6 +312,21 @@ export default function CustomerDashboard() {
                     </div>
                   </div>
                 ))}
+
+                {/* Order History Pagination */}
+                {totalOrderPages > 1 && (
+                  <div className="flex items-center justify-center gap-4 py-6">
+                    <button onClick={() => setOrderPage(p => Math.max(1, p - 1))} disabled={orderPage === 1} title="Previous page"
+                      className="w-10 h-10 rounded-xl glass-panel flex items-center justify-center text-white hover:bg-white/10 disabled:opacity-20 transition-all">
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Page {orderPage} / {totalOrderPages}</span>
+                    <button onClick={() => setOrderPage(p => Math.min(totalOrderPages, p + 1))} disabled={orderPage === totalOrderPages} title="Next page"
+                      className="w-10 h-10 rounded-xl glass-panel flex items-center justify-center text-white hover:bg-white/10 disabled:opacity-20 transition-all">
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* GPS Panel */}

@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/auth';
 import { CheckCircle2, Droplets, ArrowRight, AlertCircle, RefreshCw, X } from 'lucide-react';
 import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
 import { ordersApi, paymentsApi } from '../services/api';
 
 type CartItem = { product: { id: string; name: string; price: number; volume_liters: number }; qty: number };
@@ -13,7 +14,7 @@ export default function CheckoutPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const initialCart: CartItem[] = location.state?.cart ?? [];
+  const initialCart: CartItem[] = useMemo(() => location.state?.cart ?? [], [location.state?.cart]);
 
   useEffect(() => {
     if (!user) {
@@ -103,9 +104,9 @@ export default function CheckoutPage() {
   const todayStr = new Date().toISOString().split('T')[0];
 
   return (
-    <div className="page-shell min-h-screen">
+    <div className="page-shell flex flex-col">
       <Navbar />
-      <div className="pt-24 pb-20 max-w-4xl mx-auto px-6">
+      <div className="flex-1 pt-24 pb-20 max-w-4xl mx-auto px-6 w-full">
 
         {/* Progress Bar */}
         <div className="flex items-center justify-center gap-0 mb-12 mt-8">
@@ -341,6 +342,7 @@ export default function CheckoutPage() {
         )}
 
       </div>
+      <Footer />
     </div>
   );
 }

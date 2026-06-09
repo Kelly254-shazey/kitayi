@@ -1,30 +1,27 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/auth';
-import { Droplets, AlertCircle, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { AlertCircle, Eye, EyeOff, ArrowRight, Sparkles, Lock, Mail } from 'lucide-react';
+import BrandLogo from '../components/BrandLogo';
 
 function getErrMsg(err: unknown): string {
   if (err && typeof err === 'object' && 'response' in err) {
     const e = err as { response?: { data?: { detail?: string } } };
-    return e.response?.data?.detail || 'Invalid email or password.';
+    return e.response?.data?.detail || 'Login failed. Please check your credentials.';
   }
-  return 'Invalid email or password.';
+  return 'Login failed. Please try again.';
 }
 
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [cartData, setCartData] = useState<any>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [show, setShow] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    setCartData(location.state?.cart || null);
-  }, [location.state]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,8 +31,8 @@ export default function Login() {
       const user = await login(email, password);
       if (user?.user_type && ['Super Admin','Operations Manager','Finance Manager','Auditor'].includes(user.user_type)) {
         navigate('/admin');
-      } else if (location.state?.from === '/checkout' && cartData) {
-        navigate('/checkout', { state: { cart: cartData } });
+      } else if (location.state?.from === '/checkout' && location.state?.cart) {
+        navigate('/checkout', { state: { cart: location.state.cart } });
       } else {
         navigate('/dashboard');
       }
@@ -47,84 +44,81 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-base-50 flex items-center justify-center px-6 py-16">
-      <div className="w-full max-w-md animate-slide-up">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <Link to="/" className="inline-flex flex-col items-center gap-3">
-            <div className="w-14 h-14 rounded-2xl brand-surface flex items-center justify-center shadow-brand">
-              <Droplets className="w-7 h-7 text-white" />
+    <div className="min-h-screen bg-brand-black flex items-center justify-center p-6 relative overflow-hidden">
+      {/* Background Image */}
+      <div className="absolute inset-0 z-0">
+        <img src="/assets/water-drop.jpg" alt="Water Background" className="w-full h-full object-cover opacity-20" />
+        <div className="absolute inset-0 bg-gradient-to-t from-brand-black via-brand-black/80 to-transparent" />
+      </div>
+
+      <div className="mesh-container opacity-30 z-0">
+        <div className="mesh-gradient mesh-1" />
+        <div className="mesh-gradient mesh-2" />
+      </div>
+
+      <div className="w-full max-w-xl relative z-10 animate-fade-in">
+        <div className="text-center mb-12">
+          <Link to="/" className="inline-flex flex-col items-center group">
+            <div className="w-20 h-20 rounded-3xl bg-premium-gradient flex items-center justify-center shadow-glow mb-4 transition-transform group-hover:scale-105 p-4">
+              <BrandLogo variant="mark" className="w-full h-full brightness-0 invert" />
             </div>
-            <span className="font-display font-black text-ink text-xl tracking-tight">
-              KITAYI<span className="text-brand">SOLUTIONS</span>
-            </span>
+            <h1 className="text-3xl font-display font-black text-white tracking-tighter uppercase">
+              Kitayi <span className="text-brand-cyan">Water</span>
+            </h1>
           </Link>
         </div>
 
-        <div className="card-md p-8 flex flex-col gap-6">
-          <div className="text-center flex flex-col gap-1">
-            <h1 className="font-display font-black text-2xl text-ink">Welcome Back</h1>
-            <p className="text-sm text-ink-muted">Sign in to your Kitayi account</p>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-8 md:p-10 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-brand-cyan/10 blur-3xl" />
+          
+          <div className="mb-10 text-center">
+            <div className="inline-flex items-center gap-2 text-brand-cyan text-[10px] font-black uppercase tracking-[0.3em] mb-2">
+              <Sparkles className="w-3 h-3" /> Secure Access
+            </div>
+            <h2 className="text-3xl font-display font-black text-white uppercase tracking-tight">Log In</h2>
+            <p className="text-white/60 text-sm font-semibold mt-1">Access your account to order water and track deliveries.</p>
           </div>
 
-          {error && (
-            <div className="alert-error flex items-start gap-2.5 text-sm animate-fade-in">
-              <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" /><span>{error}</span>
-            </div>
-          )}
+          <AnimatePresence>
+            {error && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="mb-8 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
+                <span className="text-xs font-bold text-rose-400/80 uppercase tracking-wider">{error}</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-ink-secondary uppercase tracking-wider">Email Address</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-                placeholder="you@example.com" className="form-input" required autoComplete="email" />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <div className="flex justify-between items-center">
-                <label className="text-xs font-semibold text-ink-secondary uppercase tracking-wider">Password</label>
-                <button type="button" className="text-xs text-brand font-semibold hover:text-brand-dark">Forgot Password?</button>
-              </div>
-              <div className="relative">
-                <input type={show ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
-                  placeholder="••••••••••••" className="form-input pr-11" required autoComplete="current-password" />
-                <button type="button" onClick={() => setShow(!show)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink transition-colors">
-                  {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+            <div className="flex flex-col gap-2">
+              <label className="text-[10px] font-black text-brand-cyan uppercase tracking-widest ml-1">Email Address</label>
+              <div className="relative group">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 group-focus-within:text-brand-cyan transition-colors" />
+                <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="your@email.com" className="w-full bg-white/5 border border-white/10 rounded-2xl px-12 py-4 text-white text-sm outline-none focus:border-brand-cyan transition-all placeholder:text-white/20" required />
               </div>
             </div>
-            <button type="submit" disabled={loading} className="btn-brand py-4 mt-1 w-full justify-center disabled:opacity-50">
-              {loading
-                ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Signing In...</>
-                : <>Sign In <ArrowRight className="w-4 h-4" /></>}
+
+            <div className="flex flex-col gap-2">
+              <div className="flex justify-between items-center ml-1">
+                <label className="text-[10px] font-black text-brand-cyan uppercase tracking-widest">Password</label>
+                <button type="button" className="text-[10px] text-white/40 font-bold uppercase tracking-widest hover:text-brand-cyan transition-colors">Forgot Password?</button>
+              </div>
+              <div className="relative group">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 group-focus-within:text-brand-cyan transition-colors" />
+                <input type={show ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••••••" className="w-full bg-white/5 border border-white/10 rounded-2xl px-12 py-4 text-white text-sm outline-none focus:border-brand-cyan transition-all placeholder:text-white/20" required />
+                <button type="button" onClick={() => setShow(!show)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors">{show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>
+              </div>
+            </div>
+
+            <button type="submit" disabled={loading} className="btn-premium w-full py-5 text-sm uppercase tracking-[0.2em] font-black disabled:opacity-50 mt-4 group">
+              {loading ? <div className="flex items-center justify-center gap-3 font-mono-data"><div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" /> VERIFYING...</div> : <div className="flex items-center justify-center gap-2"><span>Log In Now</span><ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" /></div>}
             </button>
           </form>
 
-          <p className="text-center text-sm text-ink-muted">
-            Don't have an account?{' '}
-            <Link to="/register" className="text-brand font-semibold hover:text-brand-dark">Create Account</Link>
-          </p>
-
-          {/* Demo credentials */}
-          <div className="border-t border-base-200 pt-5 flex flex-col gap-2">
-            <p className="text-xs font-semibold text-ink-muted uppercase tracking-wider">Demo Access</p>
-            {[
-              { label: 'Admin', email: 'admin@kitayi.com' },
-              { label: 'Customer', email: 'user@kitayi.com' },
-              { label: 'Driver', email: 'driver@kitayi.com' },
-            ].map(({ label, email: e }) => (
-              <button key={label} type="button" onClick={() => { setEmail(e); setPassword('DemoPass123!'); }}
-                className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-base-50 border border-base-200 hover:border-brand/30 hover:bg-brand-light transition-all text-xs">
-                <span className="text-ink-secondary font-medium">{label}</span>
-                <span className="font-mono text-ink-muted">{e}</span>
-              </button>
-            ))}
+          <div className="mt-12 pt-8 border-t border-white/10 flex flex-col items-center gap-6">
+            <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">New to Kitayi? <Link to="/register" className="text-brand-cyan hover:text-white transition-colors">Create an Account</Link></p>
+            <Link to="/pay-bill" className="text-[9px] font-bold text-white/30 uppercase tracking-[0.3em] hover:text-brand-cyan transition-colors">Quick Bill Payment →</Link>
           </div>
-        </div>
-
-        <p className="text-center text-xs text-ink-muted mt-6">
-          <Link to="/pay-bill" className="hover:text-brand transition-colors">Pay your bill without logging in →</Link>
-        </p>
+        </motion.div>
       </div>
     </div>
   );

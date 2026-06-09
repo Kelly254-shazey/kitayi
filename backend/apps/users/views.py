@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from apps.common.audit import log_action
 from apps.common.models import AuditLog
-from apps.common.throttles import AuthRateThrottle
+from apps.common.throttles import LoginThrottle, RegisterThrottle, PasswordResetThrottle  # ✅ SECURITY
 from apps.users.serializers import (
     EmailVerificationSerializer,
     LoginSerializer,
@@ -73,7 +73,7 @@ class RegisterView(generics.CreateAPIView):
 
 class LoginView(APIView):
     permission_classes = (AllowAny,)
-    throttle_classes = (AuthRateThrottle,)
+    throttle_classes = (LoginThrottle,)  # ✅ SECURITY: Very strict
 
     def get(self, request):
         serializer = LoginSerializer()
@@ -110,6 +110,7 @@ class CurrentUserView(generics.RetrieveAPIView):
 
 class PasswordResetView(APIView):
     permission_classes = (AllowAny,)
+    throttle_classes = (PasswordResetThrottle,)  # ✅ SECURITY: Prevent email bombing
 
     def get(self, request):
         serializer = PasswordResetSerializer()

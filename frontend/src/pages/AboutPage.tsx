@@ -1,4 +1,5 @@
-import { Shield, Users, Award, Droplets, CheckCircle2, Leaf, FlaskConical, Globe } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Shield, Droplets, CheckCircle2, Leaf, FlaskConical, Globe, BadgeCheck } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 
@@ -6,126 +7,145 @@ const MILESTONES = [
   { year: '2014', title: 'Founded', desc: 'Kitayi Solutions Limited incorporated in Nairobi with a vision to deliver clean water to every Kenyan household.' },
   { year: '2016', title: 'KEBS Certification', desc: 'Achieved full Kenya Bureau of Standards certification for all water products and purification processes.' },
   { year: '2019', title: 'Commercial Expansion', desc: 'Launched bulk tanker division to serve factories, construction sites, and public utilities across 5 counties.' },
-  { year: '2022', title: 'Digital Platform', desc: 'Launched the digital ordering and payment platform — enabling 24/7 online water ordering and M-Pesa payments.' },
-  { year: '2026', title: 'National Scale', desc: 'Serving 50,000+ customers across Kenya with a fleet of 40 vehicles and full GPS dispatch tracking.' },
+  { year: '2022', title: 'Digital Infrastructure', desc: 'Launched the digital provisioning and payment platform — enabling 24/7 online water ordering and telemetry.' },
+  { year: '2026', title: 'National Leadership', desc: 'Serving 75,000+ customers across Kenya with a fleet of 40 vehicles and full GPS dispatch tracking.' },
 ];
 
-const COMPLIANCE = ['Kenya Bureau of Standards (KEBS)', 'World Health Organization (WHO) Water Guidelines', 'Kenya Water Act 2016', 'PCI-DSS Payment Security', 'ISO 9001:2015 Quality Management'];
+const TRUST_MARKERS = [
+  { icon: BadgeCheck, title: 'KEBS Certified', desc: 'Compliance with GS 1234 standards' },
+  { icon: FlaskConical, title: 'WHO Standards', desc: 'World-class purity benchmarks' },
+  { icon: Leaf, title: 'Sustainable', desc: 'Eco-conscious resource management' },
+];
 
 export default function AboutPage() {
   return (
     <div className="page-shell">
       <Navbar />
-      <div className="pt-24">
-        {/* Hero */}
-        <section className="py-24 max-w-7xl mx-auto px-6">
-          <div className="grid md:grid-cols-2 gap-16 items-center">
-            <div className="flex flex-col gap-6">
-              <div className="section-tag w-fit">About Kitayi Solutions</div>
-              <h1 className="text-5xl md:text-6xl font-display font-black text-ink leading-tight">
-                Kenya's Most Trusted <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-cyan-400">Water Partner</span>
+      <div className="flex-1 space-y-32 py-32">
+        {/* Hero Section */}
+        <section className="max-w-7xl mx-auto px-10">
+          <div className="grid md:grid-cols-2 gap-24 items-center">
+            <div className="flex flex-col gap-8">
+              <div className="mb-4 inline-flex items-center gap-2 px-6 py-2.5 rounded-full glass-panel border-brand-primary/10">
+                <div className="w-2 h-2 rounded-full bg-brand-primary animate-pulse shadow-glow" />
+                <span className="text-[10px] font-display font-black tracking-[0.4em] uppercase text-brand-primary dark:text-white/60">
+                  Our Story
+                </span>
+              </div>
+              <h1 className="text-5xl md:text-7xl lg:text-8xl font-display font-black text-brand-navy dark:text-white leading-none uppercase tracking-tighter">
+                Trusted <br/> <span className="text-premium-gradient">Water Supply.</span>
               </h1>
-              <p className="text-ink-secondary text-lg leading-relaxed">
-                Since 2014, Kitayi Solutions Limited has been delivering KEBS-certified, WHO-compliant purified water to residential and commercial clients across Kenya. Our mission is simple: pure water, delivered on time, every time.
+              <p className="text-ink dark:text-white/80 text-xl font-medium leading-relaxed">
+                Since 2014, Kitayi Solutions Limited has been providing clean and safe water to 
+                homes and businesses across the region with reliable and sustainable delivery.
               </p>
-              <div className="flex flex-wrap gap-3">
-                {['KEBS Certified', 'ISO 9001', 'WHO Compliant', 'PCI-DSS Secure'].map((b) => (
-                  <span key={b} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-ink/8 border border-ink/12 text-xs font-semibold text-ink-secondary">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-success" /> {b}
+              <div className="flex flex-wrap gap-4">
+                {['KEBS Certified', 'WHO Compliant', 'ISO 9001', 'PCI-DSS Secure'].map((b) => (
+                  <span key={b} className="flex items-center gap-2 px-5 py-2 rounded-xl bg-brand-primary/5 border border-brand-primary/10 text-[10px] font-black uppercase tracking-widest text-brand-primary dark:text-white/60">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> {b}
                   </span>
                 ))}
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-6">
               {[
-                { icon: Shield, label: 'Safety First', desc: 'Every batch tested in our accredited lab before dispatch.' },
-                { icon: Droplets, label: 'Pure Source', desc: 'Water sourced from protected natural springs and borehole aquifers.' },
-                { icon: Leaf, label: 'Eco-Responsible', desc: 'Reusable container program reduces plastic waste by 70%.' },
-                { icon: Globe, label: 'Kenya-Wide', desc: 'Operating across 15 counties with 40-vehicle dispatch fleet.' },
+                { icon: Shield, label: 'Safety Verified', desc: 'Every batch tested in our accredited lab before network entry.' },
+                { icon: Droplets, label: 'Pure Source', desc: 'Water provisioned from protected natural aquifers.' },
+                { icon: Leaf, label: 'Sustainable', desc: 'Reduced plastic waste through reusable container protocols.' },
+                { icon: Globe, label: 'Kenya-Wide', desc: 'Operating across 15 counties with a precision dispatch fleet.' },
               ].map(({ icon: Icon, label, desc }) => (
-                <div key={label} className="glass-card p-5 flex flex-col gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-primary/15 border border-primary/25 flex items-center justify-center">
-                    <Icon className="w-5 h-5 text-primary" />
+                <div key={label} className="glass-card p-8 flex flex-col gap-6 bg-white/60 dark:bg-white/5 shadow-none border-brand-primary/5 hover:border-brand-primary/20 transition-all">
+                  <div className="w-12 h-12 rounded-2xl bg-brand-primary/10 flex items-center justify-center">
+                    <Icon className="w-6 h-6 text-brand-primary" />
                   </div>
-                  <p className="text-sm font-bold text-ink">{label}</p>
-                  <p className="text-xs text-ink-muted leading-relaxed">{desc}</p>
+                  <div>
+                    <p className="text-lg font-display font-black text-brand-navy dark:text-white uppercase tracking-tight mb-2">{label}</p>
+                    <p className="text-xs text-ink/80 dark:text-white/60 leading-relaxed font-semibold">{desc}</p>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* Timeline */}
-        <section className="py-20 max-w-4xl mx-auto px-6">
-          <div className="text-center mb-14">
-            <div className="section-tag mx-auto mb-4">Our Journey</div>
-            <h2 className="text-4xl font-display font-black text-ink">A Decade of Pure Excellence</h2>
+        {/* Trust Markers Bar */}
+        <section className="py-20 bg-brand-soft/20 dark:bg-white/[0.01] border-y border-brand-primary/5">
+          <div className="max-w-7xl mx-auto px-10">
+            <div className="flex flex-wrap items-center justify-center gap-12 md:gap-24 opacity-60">
+              {TRUST_MARKERS.map((marker, i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <marker.icon className="w-8 h-8 text-brand-primary" />
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-brand-navy dark:text-white">{marker.title}</span>
+                    <span className="text-[9px] font-bold text-brand-primary/40">{marker.desc}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Timeline Sequence */}
+        <section className="max-w-4xl mx-auto px-10">
+          <div className="text-center mb-24">
+            <span className="text-[10px] font-black text-brand-primary uppercase tracking-[0.4em] mb-4 block">The Sequence</span>
+            <h2 className="text-4xl md:text-6xl font-display font-black text-brand-navy dark:text-white uppercase tracking-tighter">A Decade of Leadership</h2>
           </div>
           <div className="relative">
-            <div className="absolute left-8 top-0 bottom-0 w-px bg-gradient-to-b from-primary/50 via-primary/20 to-transparent" />
-            <div className="flex flex-col gap-8">
-              {MILESTONES.map(({ year, title, desc }) => (
-                <div key={year} className="flex gap-6 items-start pl-4">
-                  <div className="w-8 h-8 rounded-full bg-primary border-2 border-primary/50 flex items-center justify-center text-ink text-xs font-bold shrink-0 shadow-glow-sm" />
-                  <div className="glass-card p-5 flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className="text-xs font-bold text-primary bg-primary/15 px-2.5 py-0.5 rounded-full border border-primary/25">{year}</span>
-                      <h3 className="text-sm font-bold text-ink">{title}</h3>
+            <div className="absolute left-8 top-0 bottom-0 w-px bg-brand-primary/10" />
+            <div className="space-y-12">
+              {MILESTONES.map(({ year, title, desc }, i) => (
+                <motion.div 
+                  key={year} 
+                  initial={{ opacity: 0, x: -20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                  className="flex gap-10 items-start pl-4"
+                >
+                  <div className="w-8 h-8 rounded-full bg-brand-primary flex items-center justify-center text-white text-[10px] font-black shrink-0 shadow-glow" />
+                  <div className="glass-card p-8 flex-1 bg-white/60 dark:bg-white/5 border-brand-primary/5 hover:border-brand-primary/20 transition-all">
+                    <div className="flex items-center gap-4 mb-4">
+                      <span className="text-[10px] font-black text-brand-primary bg-brand-primary/5 px-3 py-1 rounded-full border border-brand-primary/10 uppercase tracking-widest">{year}</span>
+                      <h3 className="text-xl font-display font-black text-brand-navy dark:text-white uppercase tracking-tight">{title}</h3>
                     </div>
-                    <p className="text-xs text-ink-secondary leading-relaxed">{desc}</p>
+                    <p className="text-sm text-ink/80 dark:text-white/60 leading-relaxed font-semibold">{desc}</p>
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* Purification process */}
-        <section className="py-20 max-w-7xl mx-auto px-6">
-          <div className="glass-card p-10 md:p-16">
-            <div className="grid md:grid-cols-2 gap-16 items-center">
-              <div className="flex flex-col gap-6">
-                <div className="section-tag w-fit">Purification Process</div>
-                <h2 className="text-3xl font-display font-black text-ink">7-Stage Scientific Purification</h2>
-                <div className="flex flex-col gap-3">
-                  {['Sediment Pre-filtration','Activated Carbon Filtration','Reverse Osmosis (RO)','UV Sterilization','Ozone Treatment','Remineralization','Quality Lab Certification'].map((step, i) => (
-                    <div key={step} className="flex items-center gap-3 text-sm text-ink-secondary">
-                      <div className="w-6 h-6 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-xs font-bold text-primary shrink-0">{i + 1}</div>
+        {/* Purification Section */}
+        <section className="max-w-7xl mx-auto px-10 pb-32">
+          <div className="glass-panel p-12 md:p-24 rounded-[64px] bg-brand-navy text-white relative overflow-hidden border-none shadow-premium">
+            <div className="absolute top-0 right-0 w-[800px] h-[500px] bg-brand-primary/20 blur-[150px] -z-10 animate-pulse-slow" />
+            <div className="grid md:grid-cols-2 gap-24 items-center">
+              <div className="space-y-10">
+                <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.4em] mb-4 block">Our Purification Process</span>
+                <h2 className="text-4xl md:text-7xl font-display font-black uppercase tracking-tighter leading-none">Guaranteed <br/> Purity.</h2>
+                <div className="space-y-4">
+                  {['Multi-stage Filtration','Activated Carbon','Reverse Osmosis','UV Sterilization','Ozone Treatment','Final Mineral Balance','Quality Testing'].map((step, i) => (
+                    <div key={step} className="flex items-center gap-4 text-sm font-black uppercase tracking-widest text-white/60">
+                      <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-xs font-black text-brand-cyan shrink-0">{i + 1}</div>
                       {step}
                     </div>
                   ))}
                 </div>
               </div>
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center gap-3 mb-2">
-                  <FlaskConical className="w-6 h-6 text-primary" />
-                  <h3 className="font-bold text-ink">Compliance & Standards</h3>
+              <div className="glass-card p-12 bg-white/5 border-white/10 shadow-none">
+                <FlaskConical className="w-16 h-16 text-brand-cyan mb-10 opacity-40 animate-pulse" />
+                <h3 className="text-2xl font-display font-black uppercase tracking-tight mb-6">Clean and Safe Water</h3>
+                <p className="text-white/40 font-medium leading-relaxed mb-8">
+                  Our rigorous testing and purification process ensures that every drop of water 
+                  exceeds safety standards. We are committed to providing you with the purest water possible.
+                </p>
+                <div className="flex items-center gap-4 py-6 border-t border-white/5">
+                  <BadgeCheck className="text-emerald-500 w-6 h-6" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60">Verified Pure Water</span>
                 </div>
-                {COMPLIANCE.map((c) => (
-                  <div key={c} className="flex items-center gap-2.5 p-3 rounded-xl bg-ink/5 border border-ink/8 text-sm text-ink-secondary">
-                    <CheckCircle2 className="w-4 h-4 text-success shrink-0" /> {c}
-                  </div>
-                ))}
               </div>
             </div>
-          </div>
-        </section>
-
-        {/* Team stats */}
-        <section className="py-20 max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {[
-              { icon: Users, val: '120+', label: 'Team Members' },
-              { icon: Award, val: '12', label: 'Industry Awards' },
-              { icon: Droplets, val: '2M+', label: 'Litres Delivered Monthly' },
-              { icon: Globe, val: '15', label: 'Counties Covered' },
-            ].map(({ icon: Icon, val, label }) => (
-              <div key={label} className="glass-card p-6 text-center flex flex-col gap-3 items-center">
-                <Icon className="w-6 h-6 text-primary" />
-                <p className="text-3xl font-display font-black text-ink">{val}</p>
-                <p className="text-xs text-ink-muted uppercase tracking-wider">{label}</p>
-              </div>
-            ))}
           </div>
         </section>
       </div>

@@ -61,9 +61,9 @@ export default function BillPayPage() {
   };
 
   return (
-    <div className="page-shell">
+    <div className="page-shell flex flex-col">
       <Navbar />
-      <div className="pt-24 pb-20 max-w-2xl mx-auto px-6">
+      <div className="flex-1 pt-24 pb-20 max-w-2xl mx-auto w-full px-6">
         <div className="py-12 text-center flex flex-col items-center gap-4">
           <div className="w-16 h-16 rounded-2xl bg-primary/20 border border-primary/30 flex items-center justify-center">
             <CreditCard className="w-8 h-8 text-primary" />
