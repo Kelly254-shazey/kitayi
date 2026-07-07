@@ -80,7 +80,7 @@ export default function AiAssistant() {
     <div className="fixed bottom-5 left-5 z-[60] md:left-auto md:right-5">
       {open && (
         <div className="mb-4 w-[calc(100vw-2.5rem)] max-w-sm overflow-hidden rounded-2xl border border-white/20 bg-white shadow-2xl">
-          <div className="brand-surface flex items-center justify-between px-4 py-3 text-white">
+          <div className="flex items-center justify-between px-4 py-3 text-white bg-gradient-to-r from-blue-600 to-blue-700 shadow-lg">
             <div className="flex items-center gap-2">
               <Bot className="h-5 w-5" />
               <span className="text-sm font-bold">Kitayi Assistant</span>
@@ -140,7 +140,7 @@ export default function AiAssistant() {
       <button
         type="button"
         onClick={() => setOpen(current => !current)}
-        className="brand-surface flex h-14 w-14 items-center justify-center rounded-full text-white shadow-[0_18px_42px_rgba(14,165,233,0.45)] transition-transform hover:-translate-y-0.5"
+        className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-[0_18px_42px_rgba(14,165,233,0.45)] transition-transform hover:-translate-y-0.5 hover:from-blue-700 hover:to-blue-800"
         aria-label="Open Kitayi assistant"
       >
         <Bot className="h-6 w-6" />

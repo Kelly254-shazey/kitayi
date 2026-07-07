@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useEffect } from 'react';
+
 import BrandLogo from './components/BrandLogo';
 import { AuthProvider } from './context/auth';
 import { useAuth } from './context/useAuth';
@@ -15,9 +15,24 @@ import ContactPage from './pages/ContactPage';
 import BillPayPage from './pages/BillPayPage';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import PasswordReset from './pages/PasswordReset';
 import CustomerDashboard from './pages/CustomerDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import AiAssistant from './components/AiAssistant';
+
+const CUSTOMER_ROLES = ['Residential', 'Commercial', 'Industrial'];
+const OPERATIONS_ROLES = [
+  'Cashier',
+  'Branch Manager',
+  'System Administrator',
+  'Driver',
+  'Warehouse Staff',
+  'Customer Support',
+  'Auditor',
+  'Super Admin',
+  'Operations Manager',
+  'Finance Manager',
+];
 
 const PageTransition = ({ children }: { children: React.ReactNode }) => (
   <motion.div
@@ -70,13 +85,14 @@ function AppRoutes() {
         <Route path="/pay-bill" element={<PageTransition><BillPayPage /></PageTransition>} />
         <Route path="/login" element={<PageTransition><Login /></PageTransition>} />
         <Route path="/register" element={<PageTransition><Register /></PageTransition>} />
+        <Route path="/reset-password" element={<PageTransition><PasswordReset /></PageTransition>} />
         <Route path="/dashboard" element={
-          <ProtectedRoute allowedRoles={['Residential','Commercial','Corporate Customer']}>
+          <ProtectedRoute allowedRoles={CUSTOMER_ROLES}>
             <PageTransition><CustomerDashboard /></PageTransition>
           </ProtectedRoute>
         } />
         <Route path="/admin" element={
-          <ProtectedRoute allowedRoles={['Super Admin','Operations Manager','Finance Manager','Auditor']}>
+          <ProtectedRoute allowedRoles={OPERATIONS_ROLES}>
             <PageTransition><AdminDashboard /></PageTransition>
           </ProtectedRoute>
         } />
@@ -87,19 +103,9 @@ function AppRoutes() {
 }
 
 export default function App() {
-  useEffect(() => {
-    // Dark mode by default for that premium SaaS feel
-    document.documentElement.classList.add('dark');
-  }, []);
-
   return (
     <AuthProvider>
       <Router>
-        <div className="mesh-container">
-          <div className="mesh-gradient mesh-1" />
-          <div className="mesh-gradient mesh-2" />
-          <div className="mesh-gradient mesh-3" />
-        </div>
         
         <ScrollProgress />
         

@@ -134,6 +134,8 @@ export const paymentsApi = {
     api.post('/payments/pay-mpesa/', { order_id }),
   stripeCheckout: (order_id: string) =>
     api.post('/payments/pay-stripe/', { order_id }),
+  otherCheckout: (order_id: string, provider: string) =>
+    api.post('/payments/pay-other/', { order_id, provider }),
 };
 
 // --- Subscriptions ---

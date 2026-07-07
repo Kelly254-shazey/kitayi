@@ -13,6 +13,14 @@ class User(AbstractUser):
     class UserType(models.TextChoices):
         RESIDENTIAL = 'Residential', 'Residential'
         COMMERCIAL = 'Commercial', 'Commercial'
+        INDUSTRIAL = 'Industrial', 'Industrial'
+        CASHIER = 'Cashier', 'Cashier'
+        BRANCH_MANAGER = 'Branch Manager', 'Branch Manager'
+        SYSTEM_ADMINISTRATOR = 'System Administrator', 'System Administrator'
+        DRIVER = 'Driver', 'Driver'
+        WAREHOUSE_STAFF = 'Warehouse Staff', 'Warehouse Staff'
+        CUSTOMER_SUPPORT = 'Customer Support', 'Customer Support'
+        AUDITOR = 'Auditor', 'Auditor'
 
     class SocialProvider(models.TextChoices):
         GOOGLE = 'Google', 'Google'
@@ -29,7 +37,7 @@ class User(AbstractUser):
     )
     full_name = models.CharField(max_length=255)
     user_type = models.CharField(
-        max_length=20,
+        max_length=30,
         choices=UserType.choices,
         default=UserType.RESIDENTIAL,
     )
@@ -59,3 +67,22 @@ class User(AbstractUser):
 
     def get_full_name(self):
         return self.full_name or self.email
+
+    @property
+    def is_customer(self):
+        return self.user_type in {
+            self.UserType.RESIDENTIAL,
+            self.UserType.COMMERCIAL,
+            self.UserType.INDUSTRIAL,
+        }
+
+    @property
+    def is_employee(self):
+        return self.user_type in {
+            self.UserType.CASHIER,
+            self.UserType.BRANCH_MANAGER,
+            self.UserType.DRIVER,
+            self.UserType.WAREHOUSE_STAFF,
+            self.UserType.CUSTOMER_SUPPORT,
+            self.UserType.AUDITOR,
+        }

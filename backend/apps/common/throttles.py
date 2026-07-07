@@ -22,14 +22,14 @@ class LoginThrottle(SimpleRateThrottle):
     """
     scope = 'login'
     
-    def get_cache_key(self):
-        if self.request.method != 'POST':
+    def get_cache_key(self, request, view):
+        if request.method != 'POST':
             return None
         
         # Rate limit by IP address
         return self.cache_format % {
             'scope': self.scope,
-            'ident': self.get_ident(self.request)
+            'ident': self.get_ident(request)
         }
 
 
@@ -42,13 +42,13 @@ class RegisterThrottle(SimpleRateThrottle):
     """
     scope = 'register'
     
-    def get_cache_key(self):
-        if self.request.method != 'POST':
+    def get_cache_key(self, request, view):
+        if request.method != 'POST':
             return None
         
         return self.cache_format % {
             'scope': self.scope,
-            'ident': self.get_ident(self.request)
+            'ident': self.get_ident(request)
         }
 
 
@@ -61,12 +61,12 @@ class PasswordResetThrottle(SimpleRateThrottle):
     """
     scope = 'password_reset'
     
-    def get_cache_key(self):
-        if self.request.method != 'POST':
+    def get_cache_key(self, request, view):
+        if request.method != 'POST':
             return None
         
         # Rate limit by email address
-        email = self.request.data.get('email', '')
+        email = request.data.get('email', '')
         if not email:
             return None
         
@@ -84,4 +84,3 @@ class PaymentRateThrottle(UserRateThrottle):
     Purpose: Prevent accidental duplicate charges
     """
     scope = 'payment'
-

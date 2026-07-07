@@ -19,135 +19,154 @@ const TRUST_MARKERS = [
 
 export default function AboutPage() {
   return (
-    <div className="page-shell">
+    <div style={{ backgroundColor: 'var(--surface-secondary)', minHeight: '100vh' }}>
       <Navbar />
-      <div className="flex-1 space-y-32 py-32">
-        {/* Hero Section */}
-        <section className="max-w-7xl mx-auto px-10">
-          <div className="grid md:grid-cols-2 gap-24 items-center">
-            <div className="flex flex-col gap-8">
-              <div className="mb-4 inline-flex items-center gap-2 px-6 py-2.5 rounded-full glass-panel border-brand-primary/10">
-                <div className="w-2 h-2 rounded-full bg-brand-primary animate-pulse shadow-glow" />
-                <span className="text-[10px] font-display font-black tracking-[0.4em] uppercase text-brand-primary dark:text-white/60">
-                  Our Story
-                </span>
-              </div>
-              <h1 className="text-5xl md:text-7xl lg:text-8xl font-display font-black text-brand-navy dark:text-white leading-none uppercase tracking-tighter">
-                Trusted <br/> <span className="text-premium-gradient">Water Supply.</span>
+      <div className="section">
+        <div className="page-container">
+          {/* Hero */}
+          <div className="grid md:grid-cols-2 gap-12 items-center mb-20">
+            <div className="flex flex-col gap-6">
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-caption w-fit" style={{ backgroundColor: '#eff6ff', color: '#2563eb' }}>
+                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#2563eb' }} />
+                Our Story
+              </span>
+              <h1 className="text-display-md mb-4">
+                Trusted <br/><span style={{ color: '#2563eb' }}>Water Supply.</span>
               </h1>
-              <p className="text-ink dark:text-white/80 text-xl font-medium leading-relaxed">
-                Since 2014, Kitayi Solutions Limited has been providing clean and safe water to 
+              <p className="text-body" style={{ color: 'var(--text-secondary)' }}>
+                Since 2014, Kitayi Solutions Limited has been providing clean and safe water to
                 homes and businesses across the region with reliable and sustainable delivery.
               </p>
-              <div className="flex flex-wrap gap-4">
+              <div className="flex flex-wrap gap-2">
                 {['KEBS Certified', 'WHO Compliant', 'ISO 9001', 'PCI-DSS Secure'].map((b) => (
-                  <span key={b} className="flex items-center gap-2 px-5 py-2 rounded-xl bg-brand-primary/5 border border-brand-primary/10 text-[10px] font-black uppercase tracking-widest text-brand-primary dark:text-white/60">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> {b}
+                  <span key={b} className="badge-info">
+                    <CheckCircle2 className="w-3 h-3" style={{ color: '#10b981' }} /> {b}
                   </span>
                 ))}
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-2 gap-4">
               {[
                 { icon: Shield, label: 'Safety Verified', desc: 'Every batch tested in our accredited lab before network entry.' },
                 { icon: Droplets, label: 'Pure Source', desc: 'Water provisioned from protected natural aquifers.' },
                 { icon: Leaf, label: 'Sustainable', desc: 'Reduced plastic waste through reusable container protocols.' },
                 { icon: Globe, label: 'Kenya-Wide', desc: 'Operating across 15 counties with a precision dispatch fleet.' },
               ].map(({ icon: Icon, label, desc }) => (
-                <div key={label} className="glass-card p-8 flex flex-col gap-6 bg-white/60 dark:bg-white/5 shadow-none border-brand-primary/5 hover:border-brand-primary/20 transition-all">
-                  <div className="w-12 h-12 rounded-2xl bg-brand-primary/10 flex items-center justify-center">
-                    <Icon className="w-6 h-6 text-brand-primary" />
-                  </div>
-                  <div>
-                    <p className="text-lg font-display font-black text-brand-navy dark:text-white uppercase tracking-tight mb-2">{label}</p>
-                    <p className="text-xs text-ink/80 dark:text-white/60 leading-relaxed font-semibold">{desc}</p>
+                <div key={label} className="card">
+                  <div className="card-body">
+                    <div className="w-12 h-12 rounded-lg flex items-center justify-center mb-4" style={{ backgroundColor: '#eff6ff' }}>
+                      <Icon className="w-6 h-6" style={{ color: '#2563eb' }} />
+                    </div>
+                    <h3 className="text-h3 mb-1">{label}</h3>
+                    <p className="text-body-sm" style={{ color: 'var(--text-secondary)' }}>{desc}</p>
                   </div>
                 </div>
               ))}
             </div>
           </div>
-        </section>
 
-        {/* Trust Markers Bar */}
-        <section className="py-20 bg-brand-soft/20 dark:bg-white/[0.01] border-y border-brand-primary/5">
-          <div className="max-w-7xl mx-auto px-10">
-            <div className="flex flex-wrap items-center justify-center gap-12 md:gap-24 opacity-60">
+          {/* Trust Markers */}
+          <div className="py-12 mb-20" style={{ borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
+            <div className="flex flex-wrap items-center justify-center gap-12 md:gap-24">
               {TRUST_MARKERS.map((marker, i) => (
                 <div key={i} className="flex items-center gap-4">
-                  <marker.icon className="w-8 h-8 text-brand-primary" />
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-brand-navy dark:text-white">{marker.title}</span>
-                    <span className="text-[9px] font-bold text-brand-primary/40">{marker.desc}</span>
+                  <marker.icon className="w-8 h-8" style={{ color: '#2563eb' }} />
+                  <div>
+                    <span className="text-sm font-bold">{marker.title}</span>
+                    <p className="text-caption" style={{ color: 'var(--text-muted)' }}>{marker.desc}</p>
                   </div>
                 </div>
               ))}
             </div>
           </div>
-        </section>
 
-        {/* Timeline Sequence */}
-        <section className="max-w-4xl mx-auto px-10">
-          <div className="text-center mb-24">
-            <span className="text-[10px] font-black text-brand-primary uppercase tracking-[0.4em] mb-4 block">The Sequence</span>
-            <h2 className="text-4xl md:text-6xl font-display font-black text-brand-navy dark:text-white uppercase tracking-tighter">A Decade of Leadership</h2>
-          </div>
-          <div className="relative">
-            <div className="absolute left-8 top-0 bottom-0 w-px bg-brand-primary/10" />
-            <div className="space-y-12">
-              {MILESTONES.map(({ year, title, desc }, i) => (
-                <motion.div 
-                  key={year} 
-                  initial={{ opacity: 0, x: -20 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.1 }}
-                  className="flex gap-10 items-start pl-4"
-                >
-                  <div className="w-8 h-8 rounded-full bg-brand-primary flex items-center justify-center text-white text-[10px] font-black shrink-0 shadow-glow" />
-                  <div className="glass-card p-8 flex-1 bg-white/60 dark:bg-white/5 border-brand-primary/5 hover:border-brand-primary/20 transition-all">
-                    <div className="flex items-center gap-4 mb-4">
-                      <span className="text-[10px] font-black text-brand-primary bg-brand-primary/5 px-3 py-1 rounded-full border border-brand-primary/10 uppercase tracking-widest">{year}</span>
-                      <h3 className="text-xl font-display font-black text-brand-navy dark:text-white uppercase tracking-tight">{title}</h3>
-                    </div>
-                    <p className="text-sm text-ink/80 dark:text-white/60 leading-relaxed font-semibold">{desc}</p>
+          {/* Community Impact */}
+          <div className="mb-20">
+            <div className="text-center mb-12">
+              <span className="text-label mb-2 block" style={{ color: '#2563eb' }}>Our Impact</span>
+              <h2 className="text-h1">Serving Communities</h2>
+            </div>
+            <div className="grid-3">
+              {[
+                { value: '15+', label: 'Counties Served', desc: 'Clean water delivered across Kenya through our expanding distribution network.' },
+                { value: '75k+', label: 'Families & Businesses', desc: 'Trusted by thousands for reliable daily water supply and delivery services.' },
+                { value: '200+', label: 'Local Jobs Created', desc: 'Employing drivers, plant operators, and support staff from local communities.' },
+              ].map(({ value, label, desc }) => (
+                <div key={label} className="card text-center">
+                  <div className="card-body">
+                    <p className="text-4xl font-bold mb-2" style={{ color: '#2563eb' }}>{value}</p>
+                    <h3 className="text-h3 mb-2">{label}</h3>
+                    <p className="text-body-sm" style={{ color: 'var(--text-secondary)' }}>{desc}</p>
                   </div>
-                </motion.div>
+                </div>
               ))}
             </div>
+            <div className="mt-8 p-6 rounded-xl text-center" style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0' }}>
+              <p className="text-body-sm" style={{ color: '#065f46' }}>
+                Kitayi Solutions is committed to providing clean water access to underserved communities, supporting local schools with water donations, and promoting environmental sustainability through reusable container programs and responsible water sourcing.
+              </p>
+            </div>
           </div>
-        </section>
 
-        {/* Purification Section */}
-        <section className="max-w-7xl mx-auto px-10 pb-32">
-          <div className="glass-panel p-12 md:p-24 rounded-[64px] bg-brand-navy text-white relative overflow-hidden border-none shadow-premium">
-            <div className="absolute top-0 right-0 w-[800px] h-[500px] bg-brand-primary/20 blur-[150px] -z-10 animate-pulse-slow" />
-            <div className="grid md:grid-cols-2 gap-24 items-center">
+          {/* Timeline */}
+          <div className="max-w-3xl mx-auto mb-20">
+            <div className="text-center mb-12">
+              <span className="text-label mb-2 block" style={{ color: '#2563eb' }}>Our Journey</span>
+              <h2 className="text-h1">A Decade of Leadership</h2>
+            </div>
+            <div className="relative">
+              <div className="absolute left-[17px] top-0 bottom-0 w-px" style={{ backgroundColor: '#e2e8f0' }} />
               <div className="space-y-10">
-                <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.4em] mb-4 block">Our Purification Process</span>
-                <h2 className="text-4xl md:text-7xl font-display font-black uppercase tracking-tighter leading-none">Guaranteed <br/> Purity.</h2>
-                <div className="space-y-4">
-                  {['Multi-stage Filtration','Activated Carbon','Reverse Osmosis','UV Sterilization','Ozone Treatment','Final Mineral Balance','Quality Testing'].map((step, i) => (
-                    <div key={step} className="flex items-center gap-4 text-sm font-black uppercase tracking-widest text-white/60">
-                      <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-xs font-black text-brand-cyan shrink-0">{i + 1}</div>
-                      {step}
+                {MILESTONES.map(({ year, title, desc }, i) => (
+                  <motion.div key={year} initial={{ opacity: 0, x: -16 }} whileInView={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }} className="flex gap-8 items-start pl-4">
+                    <div className="w-9 h-9 rounded-full shrink-0 flex items-center justify-center text-xs font-bold" style={{ backgroundColor: '#2563eb', color: 'white' }}>
+                      {year.slice(2)}
                     </div>
-                  ))}
-                </div>
+                    <div className="card flex-1">
+                      <div className="card-body">
+                        <div className="flex items-center gap-3 mb-2">
+                          <span className="badge-info">{year}</span>
+                          <h3 className="text-h3">{title}</h3>
+                        </div>
+                        <p className="text-body-sm" style={{ color: 'var(--text-secondary)' }}>{desc}</p>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
               </div>
-              <div className="glass-card p-12 bg-white/5 border-white/10 shadow-none">
-                <FlaskConical className="w-16 h-16 text-brand-cyan mb-10 opacity-40 animate-pulse" />
-                <h3 className="text-2xl font-display font-black uppercase tracking-tight mb-6">Clean and Safe Water</h3>
-                <p className="text-white/40 font-medium leading-relaxed mb-8">
-                  Our rigorous testing and purification process ensures that every drop of water 
-                  exceeds safety standards. We are committed to providing you with the purest water possible.
+            </div>
+          </div>
+
+          {/* Purification */}
+          <div className="rounded-xl p-12 md:p-16 grid md:grid-cols-2 gap-12 items-center" style={{ backgroundColor: '#0f172a' }}>
+            <div className="space-y-8">
+              <span className="text-label" style={{ color: '#06b6d4' }}>Our Process</span>
+              <h2 className="text-display-md mb-4" style={{ color: 'white' }}>Guaranteed <br/>Purity.</h2>
+              <div className="space-y-3">
+                {['Multi-stage Filtration', 'Activated Carbon', 'Reverse Osmosis', 'UV Sterilization', 'Ozone Treatment', 'Final Mineral Balance', 'Quality Testing'].map((step, i) => (
+                  <div key={step} className="flex items-center gap-4 text-sm font-semibold" style={{ color: '#94a3b8' }}>
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0" style={{ backgroundColor: '#1e293b', color: '#06b6d4' }}>{i + 1}</div>
+                    {step}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="card" style={{ backgroundColor: '#1e293b', borderColor: '#334155' }}>
+              <div className="card-body">
+                <FlaskConical className="w-16 h-16 mb-6" style={{ color: '#06b6d4', opacity: 0.4 }} />
+                <h3 className="text-h3 mb-4" style={{ color: 'white' }}>Clean and Safe Water</h3>
+                <p className="text-body-sm mb-6" style={{ color: '#94a3b8' }}>
+                  Our rigorous testing and purification process ensures that every drop of water
+                  exceeds safety standards.
                 </p>
-                <div className="flex items-center gap-4 py-6 border-t border-white/5">
-                  <BadgeCheck className="text-emerald-500 w-6 h-6" />
-                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60">Verified Pure Water</span>
+                <div className="flex items-center gap-4 pt-6" style={{ borderTop: '1px solid #334155' }}>
+                  <BadgeCheck className="w-6 h-6" style={{ color: '#10b981' }} />
+                  <span className="text-caption" style={{ color: '#94a3b8' }}>Verified Pure Water</span>
                 </div>
               </div>
             </div>
           </div>
-        </section>
+        </div>
       </div>
       <Footer />
     </div>

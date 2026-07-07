@@ -1,14 +1,23 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '../context/auth';
-import { AlertCircle, Eye, EyeOff, ArrowRight, Sparkles, Lock, Mail } from 'lucide-react';
+import { useAuth } from '../context/useAuth';
+import { AlertCircle, Eye, EyeOff, ArrowRight, Mail, Lock } from 'lucide-react';
 import BrandLogo from '../components/BrandLogo';
 
 function getErrMsg(err: unknown): string {
   if (err && typeof err === 'object' && 'response' in err) {
-    const e = err as { response?: { data?: { detail?: string } } };
-    return e.response?.data?.detail || 'Login failed. Please check your credentials.';
+    if ((err as { response?: { status?: number } }).response?.status === 429) {
+      return 'Too many login attempts. Please try again after some time.';
+    }
+    const e = err as { response?: { data?: Record<string, unknown> & { detail?: string, code?: string } } };
+    const d = e.response?.data;
+    if (!d) return 'Login failed. Please check your credentials.';
+    if (d.code === 'token_not_valid' || d.detail?.includes('token')) {
+      return 'Your session has expired. Please try logging in again.';
+    }
+    if (typeof d.detail === 'string') return d.detail;
+    return Object.values(d).flat().join(' ') || 'Login failed. Please check your credentials.';
   }
   return 'Login failed. Please try again.';
 }
@@ -27,6 +36,8 @@ export default function Login() {
     e.preventDefault();
     setError('');
     setLoading(true);
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
     try {
       const user = await login(email, password);
       if (user?.user_type && ['Super Admin','Operations Manager','Finance Manager','Auditor'].includes(user.user_type)) {
@@ -44,81 +55,106 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-brand-black flex items-center justify-center p-6 relative overflow-hidden">
-      {/* Background Image */}
-      <div className="absolute inset-0 z-0">
-        <img src="/assets/water-drop.jpg" alt="Water Background" className="w-full h-full object-cover opacity-20" />
-        <div className="absolute inset-0 bg-gradient-to-t from-brand-black via-brand-black/80 to-transparent" />
-      </div>
-
-      <div className="mesh-container opacity-30 z-0">
-        <div className="mesh-gradient mesh-1" />
-        <div className="mesh-gradient mesh-2" />
-      </div>
-
-      <div className="w-full max-w-xl relative z-10 animate-fade-in">
-        <div className="text-center mb-12">
-          <Link to="/" className="inline-flex flex-col items-center group">
-            <div className="w-20 h-20 rounded-3xl bg-premium-gradient flex items-center justify-center shadow-glow mb-4 transition-transform group-hover:scale-105 p-4">
-              <BrandLogo variant="mark" className="w-full h-full brightness-0 invert" />
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: 'var(--surface-secondary)' }}>
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <Link to="/" className="inline-flex flex-col items-center">
+            <div className="w-16 h-16 rounded-xl flex items-center justify-center mb-4" style={{ backgroundColor: '#eff6ff' }}>
+              <BrandLogo variant="mark" className="w-8 h-8" />
             </div>
-            <h1 className="text-3xl font-display font-black text-white tracking-tighter uppercase">
-              Kitayi <span className="text-brand-cyan">Water</span>
-            </h1>
+            <h1 className="text-h2 mb-1">Welcome Back</h1>
+            <p className="text-body-sm" style={{ color: 'var(--text-secondary)' }}>Sign in to your Kitayi account</p>
           </Link>
         </div>
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-8 md:p-10 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-brand-cyan/10 blur-3xl" />
-          
-          <div className="mb-10 text-center">
-            <div className="inline-flex items-center gap-2 text-brand-cyan text-[10px] font-black uppercase tracking-[0.3em] mb-2">
-              <Sparkles className="w-3 h-3" /> Secure Access
+        <div className="card">
+          <div className="card-body">
+            <AnimatePresence>
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="alert-error mb-6"
+                >
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{error}</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+              <div>
+                <label htmlFor="email" className="label">Email Address</label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-muted)' }} />
+                  <input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    placeholder="your@email.com"
+                    className="input pl-10"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-1.5">
+                  <label htmlFor="password" className="label mb-0">Password</label>
+                  <Link to="/reset-password" className="text-caption" style={{ color: '#2563eb' }}>Forgot Password?</Link>
+                </div>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-muted)' }} />
+                  <input
+                    id="password"
+                    type={show ? 'text' : 'password'}
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    placeholder="Enter your password"
+                    className="input pl-10 pr-10"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShow(!show)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2"
+                    style={{ color: 'var(--text-muted)' }}
+                  >
+                    {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <button type="submit" disabled={loading} className="btn-primary btn-lg w-full mt-2">
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Signing in...
+                  </span>
+                ) : (
+                  <span className="flex items-center justify-center gap-2">
+                    Sign In <ArrowRight className="w-4 h-4" />
+                  </span>
+                )}
+              </button>
+            </form>
+
+            <div className="divider my-6" />
+
+            <p className="text-center text-body-sm" style={{ color: 'var(--text-secondary)' }}>
+              Don't have an account?{' '}
+              <Link to="/register" className="font-semibold" style={{ color: '#2563eb' }}>Create one</Link>
+            </p>
+
+            <div className="mt-4 text-center">
+              <Link to="/pay-bill" className="text-caption" style={{ color: 'var(--text-muted)' }}>
+                Pay bill without logging in &rarr;
+              </Link>
             </div>
-            <h2 className="text-3xl font-display font-black text-white uppercase tracking-tight">Log In</h2>
-            <p className="text-white/60 text-sm font-semibold mt-1">Access your account to order water and track deliveries.</p>
           </div>
-
-          <AnimatePresence>
-            {error && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="mb-8 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
-                <span className="text-xs font-bold text-rose-400/80 uppercase tracking-wider">{error}</span>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-            <div className="flex flex-col gap-2">
-              <label className="text-[10px] font-black text-brand-cyan uppercase tracking-widest ml-1">Email Address</label>
-              <div className="relative group">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 group-focus-within:text-brand-cyan transition-colors" />
-                <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="your@email.com" className="w-full bg-white/5 border border-white/10 rounded-2xl px-12 py-4 text-white text-sm outline-none focus:border-brand-cyan transition-all placeholder:text-white/20" required />
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <div className="flex justify-between items-center ml-1">
-                <label className="text-[10px] font-black text-brand-cyan uppercase tracking-widest">Password</label>
-                <button type="button" className="text-[10px] text-white/40 font-bold uppercase tracking-widest hover:text-brand-cyan transition-colors">Forgot Password?</button>
-              </div>
-              <div className="relative group">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 group-focus-within:text-brand-cyan transition-colors" />
-                <input type={show ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••••••" className="w-full bg-white/5 border border-white/10 rounded-2xl px-12 py-4 text-white text-sm outline-none focus:border-brand-cyan transition-all placeholder:text-white/20" required />
-                <button type="button" onClick={() => setShow(!show)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors">{show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>
-              </div>
-            </div>
-
-            <button type="submit" disabled={loading} className="btn-premium w-full py-5 text-sm uppercase tracking-[0.2em] font-black disabled:opacity-50 mt-4 group">
-              {loading ? <div className="flex items-center justify-center gap-3 font-mono-data"><div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" /> VERIFYING...</div> : <div className="flex items-center justify-center gap-2"><span>Log In Now</span><ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" /></div>}
-            </button>
-          </form>
-
-          <div className="mt-12 pt-8 border-t border-white/10 flex flex-col items-center gap-6">
-            <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">New to Kitayi? <Link to="/register" className="text-brand-cyan hover:text-white transition-colors">Create an Account</Link></p>
-            <Link to="/pay-bill" className="text-[9px] font-bold text-white/30 uppercase tracking-[0.3em] hover:text-brand-cyan transition-colors">Quick Bill Payment →</Link>
-          </div>
-        </motion.div>
+        </div>
       </div>
     </div>
   );

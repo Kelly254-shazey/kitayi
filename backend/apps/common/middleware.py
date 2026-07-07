@@ -21,14 +21,14 @@ class RequestResponseLoggingMiddleware(MiddlewareMixin):
     
     def process_request(self, request):
         request._start_time = time.time()
-        return request
+        return None
     
     def process_response(self, request, response):
         # Only log API requests
         if not request.path.startswith('/api/'):
             return response
         
-        duration = time.time() - request._start_time
+        duration = time.time() - getattr(request, '_start_time', time.time())
         
         log_data = {
             'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),

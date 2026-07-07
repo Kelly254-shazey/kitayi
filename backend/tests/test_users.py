@@ -40,6 +40,35 @@ class TestRegister:
         })
         assert res.status_code == 400
 
+    def test_register_industrial_customer_creates_profile(self, api_client):
+        res = api_client.post(reverse('auth:register'), {
+            'email': 'industrial@kitayi.com',
+            'phone_number': '+254711000004',
+            'full_name': 'Industrial Buyer',
+            'user_type': 'Industrial',
+            'password': 'StrongPass1!',
+            'password_confirm': 'StrongPass1!',
+        })
+        assert res.status_code == 201
+
+        from django.contrib.auth import get_user_model
+
+        user = get_user_model().objects.get(email='industrial@kitayi.com')
+        assert user.is_customer is True
+        assert user.customerprofile.account_number.startswith('KS-')
+
+    def test_public_register_rejects_employee_role(self, api_client):
+        res = api_client.post(reverse('auth:register'), {
+            'email': 'cashier@kitayi.com',
+            'phone_number': '+254711000005',
+            'full_name': 'Cashier User',
+            'user_type': 'Cashier',
+            'password': 'StrongPass1!',
+            'password_confirm': 'StrongPass1!',
+        })
+        assert res.status_code == 400
+        assert 'user_type' in res.data
+
 
 @pytest.mark.django_db
 class TestLogin:
@@ -90,3 +119,21 @@ class TestCurrentUser:
     def test_me_unauthenticated(self, api_client):
         res = api_client.get(reverse('auth:current-user'))
         assert res.status_code == 401
+
+
+@pytest.mark.django_db
+class TestUserRoles:
+    def test_employee_user_does_not_create_customer_profile(self):
+        from django.contrib.auth import get_user_model
+        from apps.customers.models import CustomerProfile
+
+        user = get_user_model().objects.create_user(
+            email='employee@kitayi.com',
+            phone_number='+254711000006',
+            full_name='Employee User',
+            password='StrongPass1!',
+            user_type='Cashier',
+        )
+
+        assert user.is_employee is True
+        assert CustomerProfile.objects.filter(user=user).exists() is False

@@ -6,7 +6,6 @@ import { communicationsApi } from '../services/api';
 
 const OFFICES = [
   { name: 'Head Office — Kimilli, Bungoma', address: 'P.O Box 132-50204, Kimilli, Bungoma', phone: '+254 705 002 891', hours: 'Mon–Fri 7am–7pm, Sat 8am–4pm' },
-  
 ];
 
 export default function ContactPage() {
@@ -25,71 +24,63 @@ export default function ContactPage() {
     try {
       await communicationsApi.contactInquiry({ name, email, subject, message });
       setSent(true);
-    } catch (err) {
-      console.error('Contact inquiry failed:', err);
-      setError('Message could not be sent. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+    } catch { setError('Message could not be sent. Please try again.'); } finally { setLoading(false); }
   };
 
   return (
-    <div className="page-shell">
+    <div style={{ backgroundColor: 'var(--surface-secondary)', minHeight: '100vh' }}>
       <Navbar />
-      <div className="flex-1 pt-20">
-
-        {/* Hero */}
-        <section className="py-12 max-w-7xl mx-auto px-6 text-center flex flex-col items-center gap-5">
-          <div className="section-tag flex items-center gap-2"><BrandLogo variant="mark" className="w-3 h-3" /> Contact Us</div>
-          <h1 className="text-5xl font-display font-black text-premium-gradient uppercase tracking-tighter">Get in Touch</h1>
-          <p className="text-ink dark:text-white/80 font-semibold max-w-xl leading-relaxed">
+      <div className="pt-24 pb-12 page-container">
+        <div className="text-center mb-10">
+          <div className="w-14 h-14 rounded-xl flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: '#eff6ff' }}>
+            <Mail className="w-7 h-7" style={{ color: '#2563eb' }} />
+          </div>
+          <h1 className="text-h1 mb-2">Get in Touch</h1>
+          <p className="text-body-sm mx-auto max-w-xl" style={{ color: 'var(--text-secondary)' }}>
             For orders, account inquiries, or emergency deliveries — our team is available to help you.
           </p>
-          <a href="tel:+254705002891" className="btn-premium px-8 py-4">
-            <Phone className="w-4 h-4 mr-2" /> Helpline: +254 705 002 891
+          <a href="tel:+254705002891" className="btn-primary btn-lg mt-4 inline-flex items-center gap-2">
+            <Phone className="w-4 h-4" /> Helpline: +254 705 002 891
           </a>
-        </section>
+        </div>
 
-        {/* Contact grid */}
-        <section className="py-6 max-w-7xl mx-auto px-6">
-          <div className="grid lg:grid-cols-2 gap-10">
-
-            {/* Inquiry Form */}
-            <div className="glass-card p-8 flex flex-col gap-6 bg-white/60 dark:bg-white/5 border-brand-primary/5">
-              <div className="flex flex-col gap-1">
-                <h2 className="font-display font-black text-2xl text-brand-navy dark:text-white uppercase tracking-tight">Send an Inquiry</h2>
-                <p className="text-sm text-ink/60 dark:text-white/60 font-bold uppercase tracking-widest">We typically respond within 2 hours.</p>
+        <div className="grid lg:grid-cols-2 gap-8">
+          <div className="card">
+            <div className="card-body flex flex-col gap-6">
+              <div>
+                <h2 className="text-h2 mb-1">Send an Inquiry</h2>
+                <p className="text-body-sm" style={{ color: 'var(--text-secondary)' }}>We typically respond within 2 hours.</p>
               </div>
 
               {sent ? (
                 <div className="flex flex-col items-center text-center gap-5 py-12">
-                  <div className="w-16 h-16 rounded-full bg-success/20 border-2 border-success/40 flex items-center justify-center">
-                    <CheckCircle2 className="w-8 h-8 text-success" />
+                  <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ backgroundColor: '#f0fdf4', border: '2px solid #86efac' }}>
+                    <CheckCircle2 className="w-8 h-8" style={{ color: '#10b981' }} />
                   </div>
                   <div>
-                    <h3 className="font-display font-bold text-xl text-white mb-2">Message Sent!</h3>
-                    <p className="text-sm text-white font-bold">Our team will contact you at <strong className="text-white font-black">{email}</strong> shortly.</p>
+                    <h3 className="text-h3 mb-2">Message Sent!</h3>
+                    <p className="text-body-sm">Our team will contact you at <strong>{email}</strong> shortly.</p>
                   </div>
-                  <button onClick={() => { setSent(false); setName(''); setEmail(''); setMessage(''); }} className="btn-secondary px-6 py-2.5 text-sm">
+                  <button onClick={() => { setSent(false); setName(''); setEmail(''); setMessage(''); }} className="btn-secondary btn-md">
                     Send Another
                   </button>
                 </div>
               ) : (
-                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                  {error && <div className="alert-danger text-sm">{error}</div>}
+                <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+                  {error && <div className="alert-error">{error}</div>}
                   <div className="grid md:grid-cols-2 gap-4">
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-black text-brand-primary dark:text-white/40 uppercase tracking-widest">Full Name</label>
-                      <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Jane Mwangi" className="glass-input text-base bg-white/40 dark:bg-white/5 border-brand-primary/10 rounded-xl px-4 py-3" required />
+                    <div>
+                      <label htmlFor="contactName" className="label">Full Name</label>
+                      <input id="contactName" type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Jane Mwangi" className="input" required />
                     </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-black text-brand-primary dark:text-white/40 uppercase tracking-widest">Email Address</label>
-                      <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="jane@gmail.com" className="glass-input text-base bg-white/40 dark:bg-white/5 border-brand-primary/10 rounded-xl px-4 py-3" required />
+                    <div>
+                      <label htmlFor="contactEmail" className="label">Email Address</label>
+                      <input id="contactEmail" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="jane@gmail.com" className="input" required />
                     </div>
                   </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label htmlFor="contact-subject" className="text-[10px] font-black text-brand-primary dark:text-white/40 uppercase tracking-widest">Subject</label>
-                    <select id="contact-subject" value={subject} onChange={e => setSubject(e.target.value)} className="glass-input text-base bg-white/40 dark:bg-white/5 border-brand-primary/10 rounded-xl px-4 py-3">
+                  <div>
+                    <label htmlFor="subject" className="label">Subject</label>
+                    <select id="subject" value={subject} onChange={e => setSubject(e.target.value)} className="select">
                       <option>General Inquiry</option>
                       <option>Business Account / Bulk Order</option>
                       <option>Emergency Delivery</option>
@@ -97,58 +88,62 @@ export default function ContactPage() {
                       <option>Feedback</option>
                     </select>
                   </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-black text-brand-primary dark:text-white/40 uppercase tracking-widest">Message</label>
-                    <textarea
-                      value={message} onChange={e => setMessage(e.target.value)}
-                      placeholder="How can we help you?"
-                      rows={5} className="glass-input resize-none text-base bg-white/40 dark:bg-white/5 border-brand-primary/10 rounded-xl px-4 py-3" required
-                    />
+                  <div>
+                    <label htmlFor="message" className="label">Message</label>
+                    <textarea id="message" value={message} onChange={e => setMessage(e.target.value)} placeholder="How can we help you?" rows={5} className="input resize-none" required />
                   </div>
-                  <button type="submit" disabled={loading} className="btn-premium py-4 disabled:opacity-50">
-                    <Send className="w-4 h-4 mr-2" /> {loading ? 'Sending...' : 'Send Message'}
+                  <button type="submit" disabled={loading} className="btn-primary btn-lg w-full">
+                    <Send className="w-4 h-4" /> {loading ? 'Sending...' : 'Send Message'}
                   </button>
                 </form>
               )}
             </div>
+          </div>
 
-            {/* Office Locations */}
-            <div className="flex flex-col gap-5">
-              {OFFICES.map(({ name, address, phone, hours }) => (
-                <div key={name} className="glass-card p-6 flex flex-col gap-4 bg-white/60 dark:bg-white/5 border-brand-primary/5">
-                  <h3 className="font-display font-bold text-brand-navy dark:text-white text-lg uppercase tracking-tight">{name}</h3>
+          <div className="flex flex-col gap-5">
+            {OFFICES.map(({ name, address, phone, hours }) => (
+              <div key={name} className="card">
+                <div className="card-body flex flex-col gap-4">
+                  <h3 className="text-h3">{name}</h3>
                   <div className="flex flex-col gap-3">
-                    <div className="flex items-start gap-3 text-sm font-bold text-ink/60 dark:text-white/60">
-                      <MapPin className="w-4 h-4 text-brand-primary shrink-0 mt-0.5" /> {address}
+                    <div className="flex items-start gap-3 text-body-sm" style={{ color: 'var(--text-secondary)' }}>
+                      <MapPin className="w-4 h-4 shrink-0 mt-0.5" style={{ color: '#2563eb' }} /> {address}
                     </div>
-                    <a href={`tel:${phone}`} className="flex items-center gap-3 text-sm font-bold text-brand-primary hover:text-brand-navy transition-colors">
+                    <a href={`tel:${phone}`} className="flex items-center gap-3 text-body-sm font-semibold" style={{ color: '#2563eb' }}>
                       <Phone className="w-4 h-4 shrink-0" /> {phone}
                     </a>
-                    <div className="flex items-center gap-3 text-sm font-bold text-ink/60 dark:text-white/60">
-                      <Clock className="w-4 h-4 text-brand-primary shrink-0" /> {hours}
+                    <div className="flex items-center gap-3 text-body-sm" style={{ color: 'var(--text-secondary)' }}>
+                      <Clock className="w-4 h-4 shrink-0" style={{ color: '#2563eb' }} /> {hours}
                     </div>
                   </div>
                 </div>
-              ))}
+              </div>
+            ))}
 
-              <div className="glass-card p-6 flex flex-col gap-3 bg-brand-navy dark:bg-white/5 border-none text-white">
-                <h3 className="font-display font-bold text-white flex items-center gap-2 uppercase tracking-tight">
-                  <Mail className="w-5 h-5 text-brand-cyan" /> Email Support
+            <div className="card" style={{ backgroundColor: '#0f172a' }}>
+              <div className="card-body flex flex-col gap-4">
+                <h3 className="text-h3 flex items-center gap-2" style={{ color: 'white' }}>
+                  <Mail className="w-5 h-5" style={{ color: '#06b6d4' }} /> Email Support
                 </h3>
                 <div className="flex flex-col gap-2">
-                  <a href="mailto:info@kitayi.co.ke" className="text-sm text-white/80 hover:text-white transition-colors">
+                  <a href="mailto:info@kitayi.co.ke" className="text-body-sm transition-colors" style={{ color: '#94a3b8' }}
+                    onMouseEnter={e => e.currentTarget.style.color = '#f1f5f9'}
+                    onMouseLeave={e => e.currentTarget.style.color = '#94a3b8'}
+                  >
                     info@kitayi.co.ke — General Support
                   </a>
-                  <a href="https://www.kitayi.co.ke" className="text-sm text-white/80 hover:text-white transition-colors" target="_blank" rel="noopener noreferrer">
+                  <a href="https://www.kitayi.co.ke" className="text-body-sm transition-colors" style={{ color: '#94a3b8' }}
+                    target="_blank" rel="noopener noreferrer"
+                    onMouseEnter={e => e.currentTarget.style.color = '#f1f5f9'}
+                    onMouseLeave={e => e.currentTarget.style.color = '#94a3b8'}
+                  >
                     www.kitayi.co.ke — Official Website
                   </a>
                 </div>
               </div>
             </div>
           </div>
-        </section>
-
-        <div className="py-10" />
+        </div>
       </div>
       <Footer />
     </div>

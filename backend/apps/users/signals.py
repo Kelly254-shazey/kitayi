@@ -6,7 +6,7 @@ from apps.users.models import User
 
 @receiver(post_save, sender=User)
 def create_customer_profile(sender, instance, created, **kwargs):
-    if created:
+    if created and instance.is_customer:
         from apps.customers.models import CustomerProfile
 
         CustomerProfile.objects.create(user=instance)

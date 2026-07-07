@@ -5,78 +5,109 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Water Company Identity (Blue & White focus)
         brand: {
-          DEFAULT: "#2563eb", // Trusted Primary Blue
-          primary: "#2563eb",
-          secondary: "#0ea5e9", // Sky/Water Blue
-          light:   "#f8fafc", // Clean Surface
-          soft:    "#eff6ff", // Very Light Blue
-          cyan:    "#06b6d4", // Action Cyan
-          navy:    "#1e40af", // Deep Trusted Blue
-          dark:    "#0f172a", // Dark Mode Base
-          black:   "#020617", // Ultra Premium Dark
-        },
-        primary: {
           DEFAULT: "#2563eb",
-          dark:    "#1e3a8a",
-          light:   "#dbeafe",
+          primary: "#2563eb",
+          secondary: "#0ea5e9",
+          light:   "#f8fafc",
+          soft:    "#eff6ff",
+          cyan:    "#06b6d4",
+          navy:    "#1e40af",
+          dark:    "#0f172a",
+          black:   "#020617",
         },
-        cta: {
-          DEFAULT: "#0ea5e9",
-          hover:   "#0284c7",
-          dark:    "#0369a1",
+        neutral: {
+          50: "#f8fafc",
+          100: "#f1f5f9",
+          200: "#e2e8f0",
+          300: "#cbd5e1",
+          400: "#94a3b8",
+          500: "#64748b",
+          600: "#475569",
+          700: "#334155",
+          800: "#1e293b",
+          900: "#0f172a",
+          950: "#020617",
         },
-        ink: {
-          DEFAULT: "#0f172a",
-          secondary: "#334155",
-          muted:     "#64748b",
+        surface: {
+          DEFAULT: "#ffffff",
+          secondary: "#f8fafc",
+          tertiary: "#f1f5f9",
         },
-        base: {
-          50: "#F8FAFC",
-          100: "#F1F5F9",
-          200: "#E2E8F0",
-          300: "#CBD5E1",
-        },
+        success: { DEFAULT: "#10b981", light: "#d1fae5", dark: "#059669" },
+        warning: { DEFAULT: "#f59e0b", light: "#fef3c7", dark: "#d97706" },
+        error:   { DEFAULT: "#ef4444", light: "#fee2e2", dark: "#dc2626" },
+        info:    { DEFAULT: "#3b82f6", light: "#dbeafe", dark: "#2563eb" },
       },
       fontFamily: {
-        sans: ["Geist Sans", "Inter", "-apple-system", "BlinkMacSystemFont", "sans-serif"],
-        display: ["-apple-system", "BlinkMacSystemFont", "SF Pro Display", "SF Pro Text", "Helvetica Neue", "Arial", "sans-serif"],
+        sans: ["Inter", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
+        display: ["Inter", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
         mono: ["JetBrains Mono", "IBM Plex Mono", "monospace"],
       },
-      backdropBlur: {
-        premium: '24px',
-        elite: '40px',
+      fontSize: {
+        'display': ['3.5rem', { lineHeight: '1.1', letterSpacing: '-0.03em', fontWeight: '700' }],
+        'display-md': ['2.75rem', { lineHeight: '1.15', letterSpacing: '-0.025em', fontWeight: '700' }],
+        'h1': ['2.25rem', { lineHeight: '1.2', letterSpacing: '-0.02em', fontWeight: '700' }],
+        'h2': ['1.75rem', { lineHeight: '1.25', letterSpacing: '-0.015em', fontWeight: '600' }],
+        'h3': ['1.25rem', { lineHeight: '1.4', letterSpacing: '-0.01em', fontWeight: '600' }],
+        'body': ['1rem', { lineHeight: '1.6', fontWeight: '400' }],
+        'body-sm': ['0.875rem', { lineHeight: '1.5', fontWeight: '400' }],
+        'caption': ['0.75rem', { lineHeight: '1.5', fontWeight: '500' }],
+        'label': ['0.75rem', { lineHeight: '1.25', fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase' }],
+      },
+      spacing: {
+        '2': '0.5rem',
+        '3': '0.75rem',
+        '4': '1rem',
+        '5': '1.25rem',
+        '6': '1.5rem',
+        '8': '2rem',
+        '10': '2.5rem',
+        '12': '3rem',
+        '16': '4rem',
+        '20': '5rem',
+        '24': '6rem',
+        '32': '8rem',
+      },
+      borderRadius: {
+        sm: '0.375rem',
+        DEFAULT: '0.5rem',
+        md: '0.75rem',
+        lg: '1rem',
+        xl: '1.25rem',
+        '2xl': '1.5rem',
       },
       boxShadow: {
-        premium: "0 20px 50px -12px rgba(37, 99, 235, 0.15)",
-        glow: "0 0 20px rgba(37, 99, 235, 0.4)",
-        card: "0 1px 3px rgba(15,23,42,0.06), 0 4px 16px rgba(15,23,42,0.04)",
-      },
-      backgroundImage: {
-        "water-mesh": "radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.05) 0, transparent 50%), radial-gradient(at 100% 100%, rgba(14, 165, 233, 0.05) 0, transparent 50%)",
-        "premium-gradient": "linear-gradient(135deg, #2563eb, #0ea5e9)",
-        "glass-gradient": "linear-gradient(135deg, rgba(255,255,255,0.4), rgba(255,255,255,0.1))",
+        sm: '0 1px 2px rgba(0,0,0,0.05)',
+        DEFAULT: '0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04)',
+        md: '0 4px 6px rgba(0,0,0,0.06), 0 2px 4px rgba(0,0,0,0.04)',
+        lg: '0 10px 15px rgba(0,0,0,0.06), 0 4px 6px rgba(0,0,0,0.03)',
+        xl: '0 20px 25px rgba(0,0,0,0.06), 0 10px 10px rgba(0,0,0,0.02)',
+        'elevated': '0 4px 24px rgba(0,0,0,0.08)',
+        'card': '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)',
       },
       animation: {
-        "wave": "wave 8s ease-in-out infinite",
-        "float": "float 6s ease-in-out infinite",
-        "pulse-slow": "pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite",
-        "mesh": "mesh 15s ease-in-out infinite",
+        'fade-in': 'fadeIn 0.3s ease-out',
+        'slide-up': 'slideUp 0.3s ease-out',
+        'slide-down': 'slideDown 0.2s ease-out',
+        'scale-in': 'scaleIn 0.2s ease-out',
       },
       keyframes: {
-        wave: {
-          "0%, 100%": { transform: "translateY(0) rotate(0deg)" },
-          "50%": { transform: "translateY(-20px) rotate(2deg)" },
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
         },
-        float: {
-          "0%,100%": { transform: "translateY(0)" },
-          "50%": { transform: "translateY(-12px)" },
+        slideUp: {
+          '0%': { opacity: '0', transform: 'translateY(8px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
         },
-        mesh: {
-          "0%, 100%": { transform: "translate(0, 0) scale(1)" },
-          "33%": { transform: "translate(30px, -50px) scale(1.05)" },
-          "66%": { transform: "translate(-20px, 20px) scale(0.95)" },
+        slideDown: {
+          '0%': { opacity: '0', transform: 'translateY(-8px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        scaleIn: {
+          '0%': { opacity: '0', transform: 'scale(0.95)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
         },
       },
     },

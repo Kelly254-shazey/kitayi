@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
 import {
   Package, Truck, CheckCircle2, Phone,
@@ -46,27 +46,24 @@ const OrderTracking: React.FC = () => {
     'Failed': 'bg-red-100 text-red-700',
   };
 
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     try {
       setLoading(true);
       const response = await api.get('/orders/');
       const orderList = Array.isArray(response.data) ? response.data : response.data.results || [];
-      
-      // Sort by created_at descending
+
       orderList.sort((a: Order, b: Order) =>
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
-      
+
       setOrders(orderList);
-      if (orderList.length > 0 && !selectedOrder) {
-        setSelectedOrder(orderList[0]);
-      }
+      setSelectedOrder(prev => prev ?? (orderList.length > 0 ? orderList[0] : null));
     } catch (error) {
       console.error('Failed to fetch orders:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Fetch orders
   useEffect(() => {
@@ -80,7 +77,7 @@ const OrderTracking: React.FC = () => {
     run();
 
     const interval = setInterval(() => {
-      // Fire-and-forget; internal state updates are guarded by mounted flag.
+      if (!mounted) return;
       fetchOrders();
     }, 30000); // Refresh every 30s
 
@@ -88,7 +85,7 @@ const OrderTracking: React.FC = () => {
       mounted = false;
       clearInterval(interval);
     };
-  }, []);
+  }, [fetchOrders]);
 
 
   const handleRefresh = async () => {

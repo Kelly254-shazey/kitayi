@@ -118,8 +118,8 @@ export default function ScrollingFeaturesExample() {
       {/* Floating Action Button */}
       <div className={`fixed bottom-8 right-8 transition-all duration-500 transform ${
         isSection3Visible ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0'
-      }`}>
-        <button className="btn-cta rounded-full w-14 h-14 flex items-center justify-center shadow-lg">
+      }`}> {/* The wrapping div does not need an aria-label unless it's interactive itself */}
+        <button className="btn-cta rounded-full w-14 h-14 flex items-center justify-center shadow-lg" aria-label="Open floating action menu">
           <Plus className="w-8 h-8" />
         </button>
       </div>

@@ -76,6 +76,14 @@ class CustomerProfileSerializer(serializers.ModelSerializer):
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=12)
     password_confirm = serializers.CharField(write_only=True, min_length=12)
+    user_type = serializers.ChoiceField(
+        choices=(
+            User.UserType.RESIDENTIAL,
+            User.UserType.COMMERCIAL,
+            User.UserType.INDUSTRIAL,
+        ),
+        default=User.UserType.RESIDENTIAL,
+    )
 
     class Meta:
         model = User

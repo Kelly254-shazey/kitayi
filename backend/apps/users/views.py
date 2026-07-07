@@ -26,7 +26,7 @@ from services.email_service import send_password_reset_email, send_verification_
 
 class RegisterView(generics.CreateAPIView):
     permission_classes = (AllowAny,)
-    throttle_classes = (AuthRateThrottle,)
+    throttle_classes = (RegisterThrottle,)
     serializer_class = UserRegistrationSerializer
 
     def get(self, request, *args, **kwargs):

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/auth';
+import { useAuth } from '../context/useAuth';
 import { CheckCircle2, Droplets, ArrowRight, AlertCircle, RefreshCw, X } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -17,15 +17,11 @@ export default function CheckoutPage() {
   const initialCart: CartItem[] = useMemo(() => location.state?.cart ?? [], [location.state?.cart]);
 
   useEffect(() => {
-    if (!user) {
-      navigate('/login', { state: { from: '/checkout', cart: initialCart } });
-    }
+    if (!user) navigate('/login', { state: { from: '/checkout', cart: initialCart } });
   }, [user, navigate, initialCart]);
 
   const [step, setStep] = useState(user && initialCart.length > 0 ? 1 : 0);
   const [cart, setCart] = useState<CartItem[]>(initialCart);
-
-  // Step 2 fields
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('Nairobi');
   const [deliveryDate, setDeliveryDate] = useState('');
@@ -33,13 +29,9 @@ export default function CheckoutPage() {
   const [coupon, setCoupon] = useState('');
   const [couponMsg, setCouponMsg] = useState('');
   const [discount, setDiscount] = useState(0);
-
-  // Step 3 fields
   const [payError, setPayError] = useState('');
   const [paying, setPaying] = useState(false);
-  const [trackingNumber, setTrackingNumber] = useState(() =>
-    `KY-${Date.now().toString().slice(-8)}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`
-  );
+  const [trackingNumber, setTrackingNumber] = useState(() => `KY-${Date.now().toString().slice(-8)}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`);
 
   const removeItem = (id: string) => setCart(prev => prev.filter(i => i.product.id !== id));
   const subtotal = cart.reduce((acc, i) => acc + i.product.price * i.qty, 0);
@@ -52,291 +44,282 @@ export default function CheckoutPage() {
     const code = coupon.trim().toUpperCase();
     if (code === 'WELCOME10') { setDiscount(0.1); setCouponMsg('10% discount applied!'); }
     else if (code === 'KSH500') { setDiscount(500); setCouponMsg('Ksh 500 flat discount applied!'); }
-    else { setDiscount(0); setCouponMsg('Invalid coupon code. Please try again.'); }
+    else { setDiscount(0); setCouponMsg('Invalid coupon code.'); }
   };
 
-  const handlePay = async (method: 'mpesa' | 'stripe') => {
+  const handlePay = async (method: 'mpesa' | 'stripe' | 'paypal' | 'apple-pay' | 'google-pay') => {
     setPayError('');
     setPaying(true);
-
     try {
       const payload = {
         items: cart.map(({ product, qty }) => ({ product: product.id, quantity: qty })),
-        delivery_address: address,
-        delivery_date: deliveryDate,
-        delivery_slot: deliverySlot,
+        delivery_address: address, delivery_date: deliveryDate, delivery_slot: deliverySlot,
         coupon_code: coupon.trim() || undefined,
       };
-
       const orderRes = await ordersApi.create(payload);
       const order = orderRes.data;
       setTrackingNumber(order.tracking_number || trackingNumber);
 
       const paymentRes = method === 'mpesa'
         ? await paymentsApi.mpesaPush(order.id)
-        : await paymentsApi.stripeCheckout(order.id);
+        : method === 'stripe'
+        ? await paymentsApi.stripeCheckout(order.id)
+        : await paymentsApi.otherCheckout(order.id, method);
 
-      if (paymentRes.data?.checkout_url) {
-        window.location.href = paymentRes.data.checkout_url;
-        return;
-      }
-
+      if (paymentRes.data?.checkout_url) { window.location.href = paymentRes.data.checkout_url; return; }
       setStep(4);
     } catch (error: unknown) {
       let message = 'Payment failed. Please review your details and try again.';
-      if (typeof error === 'string') {
-        message = error;
-      } else if (error instanceof Error) {
-        message = error.message || message;
-      } else if (error && typeof error === 'object') {
+      if (error instanceof Error) message = error.message || message;
+      else if (error && typeof error === 'object') {
         const maybe = error as { response?: { data?: { detail?: unknown } } };
-        if (maybe.response && maybe.response.data && typeof maybe.response.data === 'object') {
+        if (maybe.response?.data && typeof maybe.response.data === 'object') {
           const detail = (maybe.response.data as { detail?: unknown }).detail;
           if (typeof detail === 'string') message = detail;
         }
       }
       setPayError(message);
-    } finally {
-      setPaying(false);
-    }
+    } finally { setPaying(false); }
   };
 
   const todayStr = new Date().toISOString().split('T')[0];
 
   return (
-    <div className="page-shell flex flex-col">
+    <div className="flex flex-col min-h-screen" style={{ backgroundColor: 'var(--surface-secondary)' }}>
       <Navbar />
-      <div className="flex-1 pt-24 pb-20 max-w-4xl mx-auto px-6 w-full">
+      <div className="flex-1 pt-24 pb-12 page-container max-w-2xl">
 
         {/* Progress Bar */}
-        <div className="flex items-center justify-center gap-0 mb-12 mt-8">
+        <div className="flex items-center justify-center gap-0 mb-10 overflow-x-auto">
           {STEPS.map((label, idx) => (
             <div key={label} className="flex items-center">
-              <div className={`flex flex-col items-center gap-1.5 transition-all`}>
-                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all ${
-                  idx < step ? 'bg-success border-success text-white' :
-                  idx === step ? 'bg-primary border-primary text-white shadow-glow-sm' :
-                  'border-ink/20 text-ink-muted bg-ink/5'
-                }`}>
+              <div className="flex flex-col items-center gap-1.5">
+                <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all"
+                  style={{
+                    backgroundColor: idx < step ? '#10b981' : idx === step ? '#2563eb' : 'transparent',
+                    borderColor: idx < step ? '#10b981' : idx === step ? '#2563eb' : '#cbd5e1',
+                    color: idx <= step ? 'white' : '#94a3b8',
+                  }}>
                   {idx < step ? <CheckCircle2 className="w-4 h-4" /> : idx + 1}
                 </div>
-                <span className={`text-[10px] font-semibold uppercase tracking-wider transition-all ${idx === step ? 'text-primary' : idx < step ? 'text-success' : 'text-ink-muted'}`}>
-                  {label}
-                </span>
+                <span className="text-caption" style={{ color: idx <= step ? '#2563eb' : '#94a3b8' }}>{label}</span>
               </div>
               {idx < STEPS.length - 1 && (
-                <div className={`h-px w-16 md:w-24 mx-2 mb-5 transition-all ${idx < step ? 'bg-success' : 'bg-white/15'}`} />
+                <div className="h-px w-12 md:w-20 mx-2 mb-5" style={{ backgroundColor: idx < step ? '#10b981' : '#e2e8f0' }} />
               )}
             </div>
           ))}
         </div>
 
-        {/* STEP 0: Empty cart redirect */}
+        {/* Empty cart */}
         {step === 0 && (
-          <div className="glass-card p-16 text-center flex flex-col items-center gap-5">
-            <Droplets className="w-14 h-14 text-ink-muted" />
-            <h2 className="font-display font-black text-2xl text-ink">Your cart is empty</h2>
-            <p className="text-ink-secondary">Head back to the shop to add items before checking out.</p>
-            <Link to="/shop" className="btn-primary px-8 py-3.5">Browse Products</Link>
+          <div className="card text-center p-12">
+            <Droplets className="w-14 h-14 mx-auto mb-4" style={{ color: 'var(--text-muted)' }} />
+            <h2 className="text-h2 mb-2">Your cart is empty</h2>
+            <p className="text-body-sm mb-6" style={{ color: 'var(--text-secondary)' }}>Add items from the shop before checking out.</p>
+            <Link to="/shop" className="btn-primary btn-md">Browse Products</Link>
           </div>
         )}
 
-        {/* STEP 1: Cart Review */}
+        {/* Cart Review */}
         {step === 1 && (
-          <div className="glass-card p-8 flex flex-col gap-6">
-            <h2 className="font-display font-black text-2xl text-ink">Review Your Cart</h2>
-            <div className="flex flex-col gap-3">
-              {cart.map(({ product, qty }) => (
-                <div key={product.id} className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/8">
-                  <div className="flex flex-col gap-0.5">
-                    <p className="text-sm font-bold text-ink">{product.name}</p>
-                    <p className="text-xs text-ink-secondary">×{qty} unit{qty > 1 ? 's' : ''} @ Ksh {product.price.toLocaleString()}</p>
+          <div className="card">
+            <div className="card-body flex flex-col gap-6">
+              <h2 className="text-h2">Review Your Cart</h2>
+              <div className="flex flex-col gap-3">
+                {cart.map(({ product, qty }) => (
+                  <div key={product.id} className="flex items-center justify-between p-4 rounded-lg" style={{ border: '1px solid var(--border)' }}>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold truncate">{product.name}</p>
+                      <p className="text-caption" style={{ color: 'var(--text-secondary)' }}>
+                        &times;{qty} @ Ksh {product.price.toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3 ml-2">
+                      <span className="font-bold text-sm">Ksh {(product.price * qty).toLocaleString()}</span>
+                      <button onClick={() => removeItem(product.id)} className="btn-ghost btn-sm p-1" style={{ color: 'var(--text-muted)' }}>
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <span className="font-display font-black text-ink">Ksh {(product.price * qty).toLocaleString()}</span>
-                    <button title="Remove item" aria-label="Remove item" onClick={() => removeItem(product.id)} className="text-ink-muted hover:text-danger transition-colors">
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
+                ))}
+              </div>
+
+              {/* Coupon */}
+              <div>
+                <label htmlFor="coupon" className="label mb-2">Coupon Code</label>
+                <div className="flex gap-2">
+                  <input id="coupon" type="text" placeholder="e.g. WELCOME10" value={coupon}
+                    onChange={e => setCoupon(e.target.value)} className="input flex-1" />
+                  <button onClick={applyCoupon} className="btn-secondary btn-md">Apply</button>
                 </div>
-              ))}
-            </div>
-
-            {/* Coupon */}
-            <div className="flex flex-col gap-2">
-              <label htmlFor="coupon" className="text-xs font-semibold text-ink-muted uppercase tracking-wider">Coupon Code</label>
-              <div className="flex gap-2">
-                <input
-                  id="coupon"
-                  type="text" placeholder="e.g. WELCOME10" value={coupon}
-                  onChange={e => setCoupon(e.target.value)}
-                  className="glass-input flex-1"
-                />
-                <button onClick={applyCoupon} className="btn-secondary px-5 py-2.5 text-sm">Apply</button>
+                {couponMsg && (
+                  <p className="text-xs font-semibold mt-1" style={{ color: discount > 0 ? '#059669' : '#ef4444' }}>{couponMsg}</p>
+                )}
               </div>
-              {couponMsg && (
-                <p className={`text-xs font-semibold ${discount > 0 ? 'text-success' : 'text-danger'}`}>{couponMsg}</p>
-              )}
-            </div>
 
-            {/* Totals */}
-            <div className="border-t border-white/10 pt-5 flex flex-col gap-2 text-sm">
-              <div className="flex justify-between text-white/50"><span>Subtotal</span><span>Ksh {subtotal.toLocaleString()}</span></div>
-              {discountAmt > 0 && <div className="flex justify-between text-success font-semibold"><span>Discount</span><span>-Ksh {discountAmt.toFixed(2)}</span></div>}
-              <div className="flex justify-between text-ink-secondary"><span>VAT (16%)</span><span>Ksh {tax.toFixed(2)}</span></div>
-              <div className="flex justify-between font-display font-black text-ink text-base border-t border-ink/10 pt-3 mt-1">
-                <span>Total</span><span>Ksh {total.toFixed(2)}</span>
+              {/* Totals */}
+              <div className="flex flex-col gap-2 text-body-sm" style={{ borderTop: '1px solid var(--border)' }}>
+                <div className="flex justify-between pt-4" style={{ color: 'var(--text-secondary)' }}>
+                  <span>Subtotal</span><span>Ksh {subtotal.toLocaleString()}</span>
+                </div>
+                {discountAmt > 0 && (
+                  <div className="flex justify-between" style={{ color: '#059669' }}>
+                    <span>Discount</span><span>-Ksh {discountAmt.toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between" style={{ color: 'var(--text-secondary)' }}>
+                  <span>VAT (16%)</span><span>Ksh {tax.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between font-bold text-lg pt-3" style={{ borderTop: '1px solid var(--border)' }}>
+                  <span>Total</span><span>Ksh {total.toFixed(2)}</span>
+                </div>
               </div>
-            </div>
 
-            <button
-              onClick={() => cart.length > 0 && setStep(2)}
-              disabled={cart.length === 0}
-              className="btn-primary py-4 disabled:opacity-40"
-            >
-              Continue to Delivery Info <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-
-        {/* STEP 2: Delivery Info */}
-        {step === 2 && (
-          <div className="glass-card p-8 flex flex-col gap-6">
-            <h2 className="font-display font-black text-2xl text-ink">Delivery Information</h2>
-
-            <div className="grid md:grid-cols-2 gap-5">
-              <div className="md:col-span-2 flex flex-col gap-1.5">
-                <label htmlFor="address" className="text-xs font-semibold text-ink-muted uppercase tracking-wider">Street Address *</label>
-                <input
-                  id="address"
-                  type="text" placeholder="e.g. 123 Kilimani Road, Apt 4B"
-                  value={address} onChange={e => setAddress(e.target.value)}
-                  className="glass-input" required
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="city" className="text-xs font-semibold text-ink-muted uppercase tracking-wider">City / Town</label>
-                <input
-                  id="city"
-                  type="text" value={city} onChange={e => setCity(e.target.value)}
-                  className="glass-input"
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="deliveryDate" className="text-xs font-semibold text-ink-muted uppercase tracking-wider">Preferred Delivery Date *</label>
-                <input
-                  id="deliveryDate"
-                  type="date" value={deliveryDate} min={todayStr}
-                  onChange={e => setDeliveryDate(e.target.value)}
-                  className="glass-input"
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="deliverySlot" className="text-xs font-semibold text-ink-muted uppercase tracking-wider">Time Slot</label>
-                <select id="deliverySlot" value={deliverySlot} onChange={e => setDeliverySlot(e.target.value)} className="glass-input">
-                  <option>Morning (8am–12pm)</option>
-                  <option>Afternoon (12pm–5pm)</option>
-                  <option>Evening (5pm–8pm)</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="flex gap-3 mt-2">
-              <button onClick={() => setStep(1)} className="btn-secondary flex-1 py-3.5">← Back</button>
-              <button
-                onClick={() => address.trim() && deliveryDate ? setStep(3) : null}
-                disabled={!address.trim() || !deliveryDate}
-                className="btn-primary flex-1 py-3.5 disabled:opacity-40"
-              >
-                Continue to Payment <ArrowRight className="w-4 h-4" />
+              <button onClick={() => cart.length > 0 && setStep(2)} disabled={cart.length === 0} className="btn-primary btn-lg w-full">
+                Continue to Delivery <ArrowRight className="w-4 h-4" />
               </button>
             </div>
           </div>
         )}
 
-        {/* STEP 3: Payment */}
-        {step === 3 && (
-          <div className="glass-card p-8 flex flex-col gap-7">
-            <div>
-              <h2 className="font-display font-black text-2xl text-ink mb-1">Secure Payment</h2>
-              <p className="text-ink-muted text-sm">PCI-DSS compliant — your card data is never stored on our servers.</p>
-            </div>
-
-            {/* Order summary */}
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-5 flex flex-col gap-2 text-sm">
-              <div className="flex justify-between text-white/50"><span>Subtotal</span><span>Ksh {subtotal.toLocaleString()}</span></div>
-              {discountAmt > 0 && <div className="flex justify-between text-success"><span>Discount</span><span>-Ksh {discountAmt.toFixed(2)}</span></div>}
-              <div className="flex justify-between text-ink-secondary"><span>VAT (16%)</span><span>Ksh {tax.toFixed(2)}</span></div>
-              <div className="flex justify-between font-display font-black text-ink text-lg border-t border-ink/10 pt-3 mt-1">
-                <span>Total Due</span><span>Ksh {total.toFixed(2)}</span>
+        {/* Delivery Info */}
+        {step === 2 && (
+          <div className="card">
+            <div className="card-body flex flex-col gap-6">
+              <h2 className="text-h2">Delivery Information</h2>
+              <div className="grid md:grid-cols-2 gap-5">
+                <div className="md:col-span-2">
+                  <label htmlFor="address" className="label">Street Address *</label>
+                  <input id="address" type="text" placeholder="e.g. 123 Kilimani Road, Apt 4B"
+                    value={address} onChange={e => setAddress(e.target.value)} className="input" required />
+                </div>
+                <div>
+                  <label htmlFor="city" className="label">City / Town</label>
+                  <input id="city" type="text" value={city} onChange={e => setCity(e.target.value)} className="input" />
+                </div>
+                <div>
+                  <label htmlFor="deliveryDate" className="label">Delivery Date *</label>
+                  <input id="deliveryDate" type="date" value={deliveryDate} min={todayStr}
+                    onChange={e => setDeliveryDate(e.target.value)} className="input" />
+                </div>
+                <div>
+                  <label htmlFor="deliverySlot" className="label">Time Slot</label>
+                  <select id="deliverySlot" value={deliverySlot} onChange={e => setDeliverySlot(e.target.value)} className="select">
+                    <option>Morning (8am–12pm)</option>
+                    <option>Afternoon (12pm–5pm)</option>
+                    <option>Evening (5pm–8pm)</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button onClick={() => setStep(1)} className="btn-secondary btn-md flex-1">&larr; Back</button>
+                <button onClick={() => address.trim() && deliveryDate ? setStep(3) : null}
+                  disabled={!address.trim() || !deliveryDate}
+                  className="btn-primary btn-md flex-1 disabled:opacity-40">
+                  Continue to Payment <ArrowRight className="w-4 h-4" />
+                </button>
               </div>
             </div>
+          </div>
+        )}
 
-            {/* Delivery summary */}
-            <div className="bg-ink/5 border border-ink/10 rounded-2xl p-4 text-xs text-ink-secondary flex flex-col gap-1.5">
-              <p><span className="text-ink-muted">Address:</span> {address}, {city}</p>
-              <p><span className="text-ink-muted">Scheduled:</span> {deliveryDate} — {deliverySlot}</p>
-            </div>
+        {/* Payment */}
+        {step === 3 && (
+          <div className="card">
+            <div className="card-body flex flex-col gap-7">
+              <div>
+                <h2 className="text-h2 mb-1">Secure Payment</h2>
+                <p className="text-body-sm" style={{ color: 'var(--text-secondary)' }}>Your payment data is encrypted.</p>
+              </div>
 
-            {/* Error with Retry */}
-            {payError && (
-              <div className="bg-danger/10 border border-danger/25 p-4 rounded-xl flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-danger shrink-0 mt-0.5" />
-                <div className="flex flex-col gap-2 flex-1">
-                  <p className="text-sm text-danger font-semibold">Payment Failed</p>
-                  <p className="text-xs text-danger/80">{payError}</p>
-                  <button
-                    onClick={() => setPayError('')}
-                    className="flex items-center gap-1.5 text-xs font-bold text-danger border border-danger/30 rounded-lg px-3 py-1.5 w-fit hover:bg-danger/10 transition-colors"
-                  >
+              {/* Summary */}
+              <div className="p-5 rounded-xl" style={{ backgroundColor: '#f1f5f9' }}>
+                <div className="flex flex-col gap-2 text-body-sm">
+                  <div className="flex justify-between"><span>Subtotal</span><span>Ksh {subtotal.toLocaleString()}</span></div>
+                  {discountAmt > 0 && <div className="flex justify-between" style={{ color: '#059669' }}><span>Discount</span><span>-Ksh {discountAmt.toFixed(2)}</span></div>}
+                  <div className="flex justify-between" style={{ color: 'var(--text-secondary)' }}><span>VAT (16%)</span><span>Ksh {tax.toFixed(2)}</span></div>
+                  <div className="flex justify-between font-bold text-lg pt-3" style={{ borderTop: '1px solid #cbd5e1' }}>
+                    <span>Total Due</span><span>Ksh {total.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl text-body-sm" style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
+                <p><span style={{ color: 'var(--text-secondary)' }}>Address:</span> {address}, {city}</p>
+                <p><span style={{ color: 'var(--text-secondary)' }}>Scheduled:</span> {deliveryDate} &mdash; {deliverySlot}</p>
+              </div>
+
+              {/* Error */}
+              {payError && (
+                <div className="alert-error flex-col items-start">
+                  <div className="flex items-start gap-3 w-full">
+                    <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-semibold">Payment Failed</p>
+                      <p className="text-xs mt-1">{payError}</p>
+                    </div>
+                  </div>
+                  <button onClick={() => setPayError('')}
+                    className="mt-3 flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg"
+                    style={{ border: '1px solid #fecaca' }}>
                     <RefreshCw className="w-3.5 h-3.5" /> Retry Payment
                   </button>
                 </div>
-              </div>
-            )}
+              )}
 
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={() => handlePay('mpesa')}
-                disabled={paying}
-                className="btn-success py-4 disabled:opacity-50"
-              >
-                {paying ? 'Processing...' : '📱 Pay with M-Pesa STK Push'}
-              </button>
-              <button
-                onClick={() => handlePay('stripe')}
-                disabled={paying}
-                className="btn-primary py-4 disabled:opacity-50"
-              >
-                {paying ? 'Processing...' : '💳 Pay with Card (Stripe)'}
+              {/* Payment Methods */}
+              <div className="flex flex-col gap-3">
+                <button onClick={() => handlePay('mpesa')} disabled={paying}
+                  className="btn-lg w-full" style={{ backgroundColor: '#059669', color: 'white', borderRadius: '0.5rem', fontWeight: 600 }}>
+                  {paying ? 'Processing...' : 'Pay with M-Pesa STK Push'}
+                </button>
+                <button onClick={() => handlePay('stripe')} disabled={paying}
+                  className="btn-primary btn-lg w-full">
+                  {paying ? 'Processing...' : 'Pay with Card (Stripe)'}
+                </button>
+                <div className="grid grid-cols-3 gap-2">
+                  <button onClick={() => handlePay('paypal')} disabled={paying}
+                    className="btn-sm" style={{ backgroundColor: '#0070BA', color: 'white', borderRadius: '0.5rem', fontWeight: 600, padding: '0.75rem 1rem' }}>
+                    PayPal
+                  </button>
+                  <button onClick={() => handlePay('apple-pay')} disabled={paying}
+                    className="btn-sm" style={{ backgroundColor: '#000', color: 'white', borderRadius: '0.5rem', fontWeight: 600, padding: '0.75rem 1rem' }}>
+                    Apple Pay
+                  </button>
+                  <button onClick={() => handlePay('google-pay')} disabled={paying}
+                    className="btn-sm" style={{ backgroundColor: '#4285F4', color: 'white', borderRadius: '0.5rem', fontWeight: 600, padding: '0.75rem 1rem' }}>
+                    Google Pay
+                  </button>
+                </div>
+              </div>
+
+              <button onClick={() => setStep(2)} className="text-body-sm text-center" style={{ color: 'var(--text-muted)' }}>
+                &larr; Back to Delivery
               </button>
             </div>
-
-            <button onClick={() => setStep(2)} className="text-xs text-ink-muted hover:text-ink-secondary text-center transition-colors">
-              ← Back to Delivery Info
-            </button>
           </div>
         )}
 
-        {/* STEP 4: Confirmation */}
+        {/* Confirmation */}
         {step === 4 && (
-          <div className="glass-card p-12 text-center flex flex-col items-center gap-6">
-            <div className="w-20 h-20 rounded-full bg-success/20 border-2 border-success/40 flex items-center justify-center">
-              <CheckCircle2 className="w-10 h-10 text-success" />
+          <div className="card text-center p-12">
+            <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6" style={{ backgroundColor: '#f0fdf4', border: '2px solid #86efac' }}>
+              <CheckCircle2 className="w-10 h-10" style={{ color: '#10b981' }} />
             </div>
-            <div className="flex flex-col gap-2">
-              <h2 className="font-display font-black text-3xl text-ink">Order Confirmed!</h2>
-              <p className="text-ink-secondary leading-relaxed max-w-md">
-                Your water delivery is scheduled. You'll receive an SMS confirmation with live GPS tracking details shortly.
-              </p>
+            <h2 className="text-h1 mb-2">Order Confirmed!</h2>
+            <p className="text-body-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
+              Your water delivery is scheduled. You'll receive an SMS with tracking details.
+            </p>
+            <div className="inline-block px-8 py-4 rounded-xl mb-6" style={{ backgroundColor: '#f1f5f9' }}>
+              <p className="text-caption mb-1" style={{ color: 'var(--text-muted)' }}>Tracking Number</p>
+              <p className="font-mono font-bold text-lg tracking-wider" style={{ color: '#2563eb' }}>{trackingNumber}</p>
             </div>
-            <div className="bg-white/5 border border-white/10 rounded-2xl px-8 py-4 text-center">
-              <p className="text-xs text-ink-muted mb-1">Tracking Number</p>
-              <p className="font-mono font-black text-primary text-lg tracking-widest">{trackingNumber}</p>
-            </div>
-            <div className="flex flex-wrap gap-3 justify-center mt-2">
-              <Link to="/dashboard" className="btn-primary px-8 py-3.5">Go to Dashboard <ArrowRight className="w-4 h-4" /></Link>
-              <Link to="/shop" className="btn-secondary px-8 py-3.5">Continue Shopping</Link>
+            <div className="flex flex-wrap gap-3 justify-center">
+              <Link to="/dashboard" className="btn-primary btn-md">
+                Go to Dashboard <ArrowRight className="w-4 h-4" />
+              </Link>
+              <Link to="/shop" className="btn-secondary btn-md">Continue Shopping</Link>
             </div>
           </div>
         )}

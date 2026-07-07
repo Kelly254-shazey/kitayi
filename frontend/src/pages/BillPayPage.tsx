@@ -23,7 +23,7 @@ export default function BillPayPage() {
   const [pageState, setPageState] = useState<PageState>('lookup');
   const [bill, setBill] = useState<BillData | null>(null);
   const [lookupError, setLookupError] = useState('');
-  const [payMethod, setPayMethod] = useState<'mpesa' | 'stripe' | null>(null);
+  const [payMethod, setPayMethod] = useState<'mpesa' | 'stripe' | 'paypal' | 'apple-pay' | 'google-pay' | null>(null);
   const [payError, setPayError] = useState('');
   const [mpesaPhone, setMpesaPhone] = useState('');
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
@@ -40,18 +40,20 @@ export default function BillPayPage() {
       setBill({ account_number: data.account_number, name: data.name, address: data.address, outstanding_balance: Number(data.outstanding_balance), pending_orders: data.pending_orders });
       setSelectedOrderId(data.pending_orders?.[0]?.id ?? null);
       setPageState('bill');
-    } catch (err: unknown) {
-      setLookupError(getErrMsg(err, 'Account number not found. Please check and try again.'));
-    }
+    } catch { setLookupError('Account number not found. Please check and try again.'); }
   };
 
-  const handlePay = async (method: 'mpesa' | 'stripe') => {
+  const handlePay = async (method: 'mpesa' | 'stripe' | 'paypal' | 'apple-pay' | 'google-pay') => {
     setPayMethod(method);
     setPayError('');
     setPageState('paying');
     if (!selectedOrderId) { setPayError('No pending order available for payment.'); setPageState('error'); return; }
     try {
-      const res = method === 'mpesa' ? await paymentsApi.mpesaPush(selectedOrderId) : await paymentsApi.stripeCheckout(selectedOrderId);
+      const res = method === 'mpesa'
+        ? await paymentsApi.mpesaPush(selectedOrderId)
+        : method === 'stripe'
+        ? await paymentsApi.stripeCheckout(selectedOrderId)
+        : await paymentsApi.otherCheckout(selectedOrderId, method);
       if (res.data?.checkout_url) { window.location.href = res.data.checkout_url; return; }
       setPageState('success');
     } catch (err: unknown) {
@@ -61,144 +63,181 @@ export default function BillPayPage() {
   };
 
   return (
-    <div className="page-shell flex flex-col">
+    <div className="flex flex-col min-h-screen" style={{ backgroundColor: 'var(--surface-secondary)' }}>
       <Navbar />
-      <div className="flex-1 pt-24 pb-20 max-w-2xl mx-auto w-full px-6">
-        <div className="py-12 text-center flex flex-col items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-primary/20 border border-primary/30 flex items-center justify-center">
-            <CreditCard className="w-8 h-8 text-primary" />
+      <div className="flex-1 pt-24 pb-12 page-container max-w-2xl">
+        <div className="text-center mb-10">
+          <div className="w-14 h-14 rounded-xl flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: '#eff6ff' }}>
+            <CreditCard className="w-7 h-7" style={{ color: '#2563eb' }} />
           </div>
-          <h1 className="text-4xl font-display font-black text-ink">Pay Your Kitayi Bill</h1>
-          <p className="text-ink-secondary leading-relaxed">Enter your Kitayi Customer Account Number to fetch and pay your current water utility balance — no login required.</p>
+          <h1 className="text-h1 mb-2">Pay Your Kitayi Bill</h1>
+          <p className="text-body-sm" style={{ color: 'var(--text-secondary)' }}>
+            Enter your Customer Account Number to fetch and pay your balance — no login required.
+          </p>
         </div>
 
+        {/* Lookup */}
         {pageState === 'lookup' && (
-          <div className="glass-card p-8 flex flex-col gap-6">
-            <div className="flex flex-col gap-1">
-              <h2 className="font-display font-bold text-xl text-ink">Find Your Account</h2>
-              <p className="text-sm text-ink-muted">Your account number is printed on your monthly paper statement.</p>
-            </div>
-            <form onSubmit={handleLookup} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-ink-muted uppercase tracking-wider">Kitayi Account Number</label>
-                <input type="text" value={accountNo} onChange={e => setAccountNo(e.target.value)}
-                  placeholder="e.g. KS-8492-3015" className="glass-input text-center tracking-widest font-mono text-lg" required />
+          <div className="card">
+            <div className="card-body flex flex-col gap-6">
+              <div>
+                <h2 className="text-h3 mb-1">Find Your Account</h2>
+                <p className="text-body-sm" style={{ color: 'var(--text-muted)' }}>Your account number is printed on your monthly paper statement.</p>
               </div>
-              {lookupError && (
-                <div className="bg-danger/10 border border-danger/25 p-3.5 rounded-xl flex items-start gap-2.5 text-sm text-danger">
-                  <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" /><span>{lookupError}</span>
+              <form onSubmit={handleLookup} className="flex flex-col gap-5">
+                <div>
+                  <label htmlFor="accountNo" className="label">Kitayi Account Number</label>
+                  <input id="accountNo" type="text" value={accountNo}
+                    onChange={e => setAccountNo(e.target.value)} placeholder="e.g. KS-8492-3015"
+                    className="input text-center tracking-widest font-mono text-lg" required />
                 </div>
-              )}
-              <button type="submit" className="btn-primary py-4">
-                <Search className="w-4 h-4" /> Look Up My Balance
-              </button>
-            </form>
-            <div className="border-t border-ink/8 pt-5 flex flex-col gap-3 text-sm text-center text-ink-muted">
-              <p>Have an account? <Link to="/login" className="text-primary font-semibold hover:underline">Sign in</Link> for full billing history.</p>
-              <a href="tel:+254700000000" className="flex items-center justify-center gap-2 hover:text-ink transition-colors">
-                <Phone className="w-4 h-4" /> Can't find your number? Call: +254 700 000 000
-              </a>
-            </div>
-            <div className="bg-ink/5 border border-ink/8 rounded-xl p-4 text-xs text-ink-muted">
-              <span className="font-bold text-ink-secondary block mb-1">Demo Account Numbers:</span>
-              <span className="font-mono">KS-8492-3015</span> (Residential) • <span className="font-mono">KS-1234-5678</span> (Corporate)
+                {lookupError && (
+                  <div className="alert-error">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" /><span>{lookupError}</span>
+                  </div>
+                )}
+                <button type="submit" className="btn-primary btn-lg w-full">
+                  <Search className="w-4 h-4" /> Look Up My Balance
+                </button>
+              </form>
+              <div className="flex flex-col gap-3 text-center text-body-sm" style={{ borderTop: '1px solid var(--border)' }}>
+                <p className="pt-4" style={{ color: 'var(--text-muted)' }}>
+                  Have an account? <Link to="/login" className="font-semibold" style={{ color: '#2563eb' }}>Sign in</Link>
+                </p>
+                <a href="tel:+254700000000" className="flex items-center justify-center gap-2" style={{ color: 'var(--text-muted)' }}>
+                  <Phone className="w-3.5 h-3.5" /> Can't find your number? Call: +254 700 000 000
+                </a>
+              </div>
+              <div className="rounded-xl p-4 text-body-sm" style={{ backgroundColor: '#f1f5f9' }}>
+                <span className="font-semibold block mb-1">Demo Account Numbers:</span>
+                <span className="font-mono">KS-8492-3015</span> (Residential) &bull; <span className="font-mono">KS-1234-5678</span> (Corporate)
+              </div>
             </div>
           </div>
         )}
 
+        {/* Bill Display */}
         {pageState === 'bill' && bill && (
           <div className="flex flex-col gap-5">
-            <div className="glass-card p-8 flex flex-col gap-6">
-              <div className="flex items-start justify-between flex-wrap gap-3">
-                <div className="flex flex-col gap-1">
-                  <p className="text-xs text-ink-muted uppercase tracking-wider">Account Holder</p>
-                  <h2 className="font-display font-bold text-2xl text-ink">{bill.name}</h2>
-                  <p className="text-sm text-ink-secondary">{bill.address}</p>
-                </div>
-                <div className="flex flex-col items-end gap-1">
-                  <p className="text-xs text-ink-muted uppercase tracking-wider">Account Number</p>
-                  <p className="font-mono font-bold text-primary">{bill.account_number}</p>
-                </div>
-              </div>
-              <div className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col gap-3">
-                <div className="flex justify-between text-sm text-ink-secondary"><span>Pending Orders</span><span className="text-ink">{bill.pending_orders.length}</span></div>
-                <div className="border-t border-white/10 pt-3 mt-1 flex justify-between items-center">
-                  <span className="text-sm text-ink-secondary">Payable Amount</span>
-                  <span className={`font-display font-black text-3xl ${bill.outstanding_balance === 0 ? 'text-success' : 'text-ink'}`}>
-                    Ksh {bill.outstanding_balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
-              </div>
-              {bill.outstanding_balance === 0 ? (
-                <div className="flex items-center gap-3 p-4 bg-success/10 border border-success/25 rounded-xl text-success text-sm font-semibold">
-                  <CheckCircle2 className="w-5 h-5 shrink-0" /> Your account is fully paid.
-                </div>
-              ) : (
-                <div className="flex flex-col gap-3">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-ink-muted uppercase tracking-wider">M-Pesa Phone Number</label>
-                    <input type="tel" value={mpesaPhone} onChange={e => setMpesaPhone(e.target.value)} placeholder="+254700000000" className="glass-input" />
+            <div className="card">
+              <div className="card-body flex flex-col gap-6">
+                <div className="flex items-start justify-between flex-wrap gap-3">
+                  <div>
+                    <p className="label mb-1">Account Holder</p>
+                    <h2 className="text-h2">{bill.name}</h2>
+                    <p className="text-body-sm" style={{ color: 'var(--text-secondary)' }}>{bill.address}</p>
                   </div>
-                  <button onClick={() => handlePay('mpesa')} className="btn-success py-4">
-                    📱 Pay Ksh {bill.outstanding_balance.toLocaleString()} via M-Pesa
-                  </button>
-                  <button onClick={() => handlePay('stripe')} className="btn-primary py-4">💳 Pay with Card (Stripe)</button>
+                  <div className="text-right">
+                    <p className="label mb-1">Account Number</p>
+                    <p className="font-mono font-bold" style={{ color: '#2563eb' }}>{bill.account_number}</p>
+                  </div>
                 </div>
-              )}
+                <div className="p-6 rounded-xl" style={{ backgroundColor: '#f1f5f9' }}>
+                  <div className="flex justify-between text-body-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
+                    <span>Pending Orders</span><span>{bill.pending_orders.length}</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-3" style={{ borderTop: '1px solid #cbd5e1' }}>
+                    <span className="text-body-sm" style={{ color: 'var(--text-secondary)' }}>Payable Amount</span>
+                    <span className="text-3xl font-bold" style={{ color: bill.outstanding_balance === 0 ? '#059669' : 'var(--text-primary)' }}>
+                      Ksh {bill.outstanding_balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
+                {bill.outstanding_balance === 0 ? (
+                  <div className="alert-success">
+                    <CheckCircle2 className="w-5 h-5 shrink-0" /> Your account is fully paid.
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    <div>
+                      <label htmlFor="mpesaPhone" className="label">M-Pesa Phone Number</label>
+                      <input id="mpesaPhone" type="tel" value={mpesaPhone}
+                        onChange={e => setMpesaPhone(e.target.value)} placeholder="+254700000000" className="input" />
+                    </div>
+                    <button onClick={() => handlePay('mpesa')}
+                      className="btn-lg w-full" style={{ backgroundColor: '#059669', color: 'white', borderRadius: '0.5rem', fontWeight: 600 }}>
+                      Pay Ksh {bill.outstanding_balance.toLocaleString()} via M-Pesa
+                    </button>
+                    <button onClick={() => handlePay('stripe')} className="btn-primary btn-lg w-full">
+                      Pay with Card (Stripe)
+                    </button>
+                    <div className="grid grid-cols-3 gap-2">
+                      <button onClick={() => handlePay('paypal')}
+                        className="btn-sm" style={{ backgroundColor: '#0070BA', color: 'white', borderRadius: '0.5rem', fontWeight: 600, padding: '0.75rem' }}>
+                        PayPal
+                      </button>
+                      <button onClick={() => handlePay('apple-pay')}
+                        className="btn-sm" style={{ backgroundColor: '#000', color: 'white', borderRadius: '0.5rem', fontWeight: 600, padding: '0.75rem' }}>
+                        Apple Pay
+                      </button>
+                      <button onClick={() => handlePay('google-pay')}
+                        className="btn-sm" style={{ backgroundColor: '#4285F4', color: 'white', borderRadius: '0.5rem', fontWeight: 600, padding: '0.75rem' }}>
+                        Google Pay
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-            <button onClick={() => { setPageState('lookup'); setAccountNo(''); setBill(null); }} className="text-sm text-ink-muted hover:text-ink-secondary text-center transition-colors">
-              ← Search a different account
+            <button onClick={() => { setPageState('lookup'); setAccountNo(''); setBill(null); }}
+              className="text-body-sm text-center" style={{ color: 'var(--text-muted)' }}>
+              &larr; Search a different account
             </button>
           </div>
         )}
 
+        {/* Paying */}
         {pageState === 'paying' && (
-          <div className="glass-card p-16 text-center flex flex-col items-center gap-5">
-            <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-            <h2 className="font-display font-bold text-xl text-white">
-              {payMethod === 'mpesa' ? 'Sending STK Push to your phone...' : 'Connecting to secure card gateway...'}
+          <div className="card text-center p-16 flex flex-col items-center gap-5">
+            <div className="w-16 h-16 border-4 rounded-full animate-spin" style={{ borderColor: '#2563eb', borderTopColor: 'transparent' }} />
+            <h2 className="text-h2">
+              {payMethod === 'mpesa' ? 'Sending STK Push...' : 'Connecting to payment gateway...'}
             </h2>
-            <p className="text-sm text-white/40">
-              {payMethod === 'mpesa' ? 'Check your phone and enter your M-Pesa PIN.' : 'Please wait while we process your payment securely.'}
+            <p className="text-body-sm" style={{ color: 'var(--text-secondary)' }}>
+              {payMethod === 'mpesa' ? 'Check your phone and enter your M-Pesa PIN.' : 'Please wait while we process your payment.'}
             </p>
           </div>
         )}
 
+        {/* Success */}
         {pageState === 'success' && (
-          <div className="glass-card p-12 text-center flex flex-col items-center gap-6">
-            <div className="w-20 h-20 rounded-full bg-success/20 border-2 border-success/40 flex items-center justify-center">
-              <CheckCircle2 className="w-10 h-10 text-success" />
+          <div className="card text-center p-12 flex flex-col items-center gap-6">
+            <div className="w-20 h-20 rounded-full flex items-center justify-center" style={{ backgroundColor: '#f0fdf4', border: '2px solid #86efac' }}>
+              <CheckCircle2 className="w-10 h-10" style={{ color: '#10b981' }} />
             </div>
-            <div className="flex flex-col gap-2">
-              <h2 className="font-display font-black text-3xl text-ink">Payment Successful!</h2>
-              <p className="text-ink-secondary">Account <strong className="text-ink font-mono">{bill?.account_number}</strong> has been settled.</p>
+            <div>
+              <h2 className="text-h1 mb-2">Payment Successful!</h2>
+              <p className="text-body-sm" style={{ color: 'var(--text-secondary)' }}>
+                Account <strong className="font-mono">{bill?.account_number}</strong> has been settled.
+              </p>
             </div>
-            <div className="bg-white/5 border border-white/10 rounded-2xl px-8 py-4">
-              <p className="text-xs text-ink-muted mb-1">Transaction Reference</p>
-              <p className="font-mono font-bold text-primary text-base tracking-widest">{txRef}</p>
+            <div className="px-8 py-4 rounded-xl" style={{ backgroundColor: '#f1f5f9' }}>
+              <p className="text-caption mb-1" style={{ color: 'var(--text-muted)' }}>Transaction Reference</p>
+              <p className="font-mono font-bold tracking-wider" style={{ color: '#2563eb' }}>{txRef}</p>
             </div>
-            <p className="text-xs text-ink-muted">A receipt has been sent to your registered email address.</p>
+            <p className="text-caption" style={{ color: 'var(--text-muted)' }}>A receipt has been sent to your registered email.</p>
             <div className="flex flex-wrap gap-3 justify-center">
-              <Link to="/" className="btn-secondary px-6 py-3"><Droplets className="w-4 h-4" /> Return Home</Link>
-              <Link to="/shop" className="btn-primary px-6 py-3">Order Water <ArrowRight className="w-4 h-4" /></Link>
+              <Link to="/" className="btn-secondary btn-md"><Droplets className="w-4 h-4" /> Return Home</Link>
+              <Link to="/shop" className="btn-primary btn-md">Order Water <ArrowRight className="w-4 h-4" /></Link>
             </div>
           </div>
         )}
 
+        {/* Error */}
         {pageState === 'error' && (
-          <div className="glass-card p-10 flex flex-col items-center gap-6 text-center">
-            <div className="w-16 h-16 rounded-full bg-danger/20 border-2 border-danger/40 flex items-center justify-center">
-              <AlertCircle className="w-8 h-8 text-danger" />
+          <div className="card text-center p-10 flex flex-col items-center gap-6">
+            <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ backgroundColor: '#fef2f2', border: '2px solid #fecaca' }}>
+              <AlertCircle className="w-8 h-8" style={{ color: '#ef4444' }} />
             </div>
-            <div className="flex flex-col gap-2">
-              <h2 className="font-display font-bold text-2xl text-ink">Payment Failed</h2>
-              <p className="text-sm text-ink-secondary max-w-sm">{payError}</p>
+            <div>
+              <h2 className="text-h2 mb-2">Payment Failed</h2>
+              <p className="text-body-sm" style={{ color: 'var(--text-secondary)' }}>{payError}</p>
             </div>
             <div className="flex flex-wrap gap-3 justify-center">
-              <button onClick={() => setPageState('bill')} className="btn-primary px-6 py-3">
+              <button onClick={() => setPageState('bill')} className="btn-primary btn-md">
                 <RefreshCw className="w-4 h-4" /> Retry Payment
               </button>
-              <a href="tel:+254700000000" className="btn-secondary px-6 py-3">
+              <a href="tel:+254700000000" className="btn-secondary btn-md">
                 <Phone className="w-4 h-4" /> Call Support
               </a>
             </div>
