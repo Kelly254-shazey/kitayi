@@ -5,6 +5,7 @@ import { Menu, X, Sun, Moon } from 'lucide-react';
 import BrandLogo from './BrandLogo';
 
 const NAV_LINKS = [
+  { name: 'Home', path: '/' },
   { name: 'Services', path: '/services' },
   { name: 'About', path: '/about' },
   { name: 'Shop', path: '/shop' },
