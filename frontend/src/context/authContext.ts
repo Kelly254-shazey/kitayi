@@ -27,6 +27,8 @@ export interface AuthContextType {
   logout: () => void;
   googleLogin: () => Promise<User>;
   facebookLogin: () => Promise<User>;
+  googleRedirectLogin: () => Promise<void>;
+  facebookRedirectLogin: () => Promise<void>;
   isFirebaseActive: boolean;
 }
 

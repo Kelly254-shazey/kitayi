@@ -2,6 +2,8 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider,
   FacebookAuthProvider,
   signOut,
@@ -50,15 +52,7 @@ export async function firebaseGoogleLogin(): Promise<User> {
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: 'select_account' });
   const cred: UserCredential = await signInWithPopup(auth, provider);
-  const snapshot = await get(child(ref(db), `${DB_USERS_PATH}/${cred.user.uid}`));
-  if (!snapshot.val()) {
-    await set(ref(db, `${DB_USERS_PATH}/${cred.user.uid}`), {
-      email: cred.user.email,
-      full_name: cred.user.displayName,
-      user_type: 'Residential',
-      created_at: new Date().toISOString(),
-    });
-  }
+  await saveUserToRTDB(cred);
   return firebaseUserToAppUser(cred.user);
 }
 
@@ -66,6 +60,23 @@ export async function firebaseFacebookLogin(): Promise<User> {
   const provider = new FacebookAuthProvider();
   provider.setCustomParameters({ display: 'popup' });
   const cred: UserCredential = await signInWithPopup(auth, provider);
+  await saveUserToRTDB(cred);
+  return firebaseUserToAppUser(cred.user);
+}
+
+export async function firebaseGoogleRedirectLogin(): Promise<void> {
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
+  await signInWithRedirect(auth, provider);
+}
+
+export async function firebaseFacebookRedirectLogin(): Promise<void> {
+  const provider = new FacebookAuthProvider();
+  provider.setCustomParameters({ display: 'popup' });
+  await signInWithRedirect(auth, provider);
+}
+
+async function saveUserToRTDB(cred: UserCredential): Promise<void> {
   const snapshot = await get(child(ref(db), `${DB_USERS_PATH}/${cred.user.uid}`));
   if (!snapshot.val()) {
     await set(ref(db, `${DB_USERS_PATH}/${cred.user.uid}`), {
@@ -75,7 +86,13 @@ export async function firebaseFacebookLogin(): Promise<User> {
       created_at: new Date().toISOString(),
     });
   }
-  return firebaseUserToAppUser(cred.user);
+}
+
+export async function handleRedirectResult(): Promise<User | null> {
+  const result = await getRedirectResult(auth);
+  if (!result) return null;
+  await saveUserToRTDB(result);
+  return firebaseUserToAppUser(result.user);
 }
 
 export async function firebaseLogout(): Promise<void> {

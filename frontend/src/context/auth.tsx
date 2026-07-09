@@ -9,6 +9,9 @@ import {
   firebaseLogout,
   firebaseGoogleLogin,
   firebaseFacebookLogin,
+  firebaseGoogleRedirectLogin,
+  firebaseFacebookRedirectLogin,
+  handleRedirectResult,
 } from '../services/firebaseFallback';
 
 const API_TIMEOUT = 5000;
@@ -24,6 +27,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(getStoredUser);
   const [loading, setLoading] = useState(false);
   const [isFirebaseActive, setIsFirebaseActive] = useState(false);
+
+  useEffect(() => {
+    handleRedirectResult().then(fbUser => {
+      if (fbUser) {
+        const u: User = { ...fbUser, isFirebaseUser: true };
+        localStorage.setItem('user', JSON.stringify(u));
+        localStorage.setItem('firebase_user', 'true');
+        setIsFirebaseActive(true);
+        setUser(u);
+      }
+    }).catch(e => console.error('redirect result error:', e));
+  }, []);
 
   useEffect(() => {
     if (!getStoredUser()) { setIsFirebaseActive(false); return; }
@@ -125,6 +140,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally { setLoading(false); }
   }, []);
 
+  const googleRedirectLogin = useCallback(async (): Promise<void> => {
+    setLoading(true);
+    try {
+      await firebaseGoogleRedirectLogin();
+    } catch (e) {
+      console.error('googleRedirectLogin error:', e);
+      throw e;
+    } finally { setLoading(false); }
+  }, []);
+
+  const facebookRedirectLogin = useCallback(async (): Promise<void> => {
+    setLoading(true);
+    try {
+      await firebaseFacebookRedirectLogin();
+    } catch (e) {
+      console.error('facebookRedirectLogin error:', e);
+      throw e;
+    } finally { setLoading(false); }
+  }, []);
+
   const logout = useCallback(() => {
     const refresh = localStorage.getItem('refresh_token');
     if (refresh && !localStorage.getItem('firebase_user')) api.post('/auth/logout/', { refresh_token: refresh }).catch(() => {});
@@ -138,7 +173,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, googleLogin, facebookLogin, isFirebaseActive }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, googleLogin, facebookLogin, googleRedirectLogin, facebookRedirectLogin, isFirebaseActive }}>
       {children}
     </AuthContext.Provider>
   );
