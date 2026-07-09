@@ -66,6 +66,15 @@ export async function firebaseFacebookLogin(): Promise<User> {
   const provider = new FacebookAuthProvider();
   provider.setCustomParameters({ display: 'popup' });
   const cred: UserCredential = await signInWithPopup(auth, provider);
+  const snapshot = await get(child(ref(db), `${DB_USERS_PATH}/${cred.user.uid}`));
+  if (!snapshot.val()) {
+    await set(ref(db, `${DB_USERS_PATH}/${cred.user.uid}`), {
+      email: cred.user.email,
+      full_name: cred.user.displayName,
+      user_type: 'Residential',
+      created_at: new Date().toISOString(),
+    });
+  }
   return firebaseUserToAppUser(cred.user);
 }
 

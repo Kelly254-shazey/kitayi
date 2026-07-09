@@ -103,6 +103,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsFirebaseActive(true);
       setUser(u);
       return u;
+    } catch (e) {
+      console.error('googleLogin error:', e);
+      throw e;
     } finally { setLoading(false); }
   }, []);
 
@@ -116,6 +119,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsFirebaseActive(true);
       setUser(u);
       return u;
+    } catch (e) {
+      console.error('facebookLogin error:', e);
+      throw e;
     } finally { setLoading(false); }
   }, []);
 

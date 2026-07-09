@@ -1,0 +1,10 @@
+venv
+.env
+.env.example
+db.sqlite3
+.git
+.pytest_cache
+Dockerfile
+.dockerignore
+hr
+tests

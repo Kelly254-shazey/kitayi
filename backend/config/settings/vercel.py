@@ -5,35 +5,25 @@ from datetime import timedelta
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-# SECURITY: Keep secret key in environment
 SECRET_KEY = config('DJANGO_SECRET_KEY', default=None)
-DEBUG = os.environ.get('DJANGO_DEBUG', '').strip().lower() in ('true', '1', 'yes', 't', 'y')
-
-# Fail loudly if SECRET_KEY not provided
 if SECRET_KEY is None:
     raise ValueError('DJANGO_SECRET_KEY environment variable must be set')
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
 
-# Installed Apps
+DEBUG = os.environ.get('DJANGO_DEBUG', '').strip().lower() in ('true', '1', 'yes', 't', 'y')
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='.vercel.app,.now.sh', cast=Csv())
+
 INSTALLED_APPS = [
-    # Django defaults
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    
-    # Third-party
-    'cloudinary_storage',
-    'cloudinary',
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     'drf_spectacular',
-    
-    # Local apps
     'apps.users.apps.UsersConfig',
     'apps.customers.apps.CustomersConfig',
     'apps.products.apps.ProductsConfig',
@@ -45,7 +35,6 @@ INSTALLED_APPS = [
     'apps.common.apps.CommonConfig',
 ]
 
-# Middleware
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'corsheaders.middleware.CorsMiddleware',
@@ -55,7 +44,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    # ✅ SECURITY: Custom middleware
     'apps.common.middleware.RequestResponseLoggingMiddleware',
     'apps.common.middleware.SecurityHeadersMiddleware',
 ]
@@ -80,30 +68,23 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# Database (PostgreSQL / Fallback SQLite)
-try:
-    import psycopg2
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': config('DB_NAME', default='kitayi_db'),
-            'USER': config('DB_USER', default='postgres'),
-            'PASSWORD': config('DB_PASSWORD', default='postgres'),
-            'HOST': config('DB_HOST', default='localhost'),
-            'PORT': config('DB_PORT', default='5432'),
-            'ATOMIC_REQUESTS': True,
-        }
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': config('DB_NAME', default='neondb'),
+        'USER': config('DB_USER', default='neondb_owner'),
+        'PASSWORD': config('DB_PASSWORD', default=''),
+        'HOST': config('DB_HOST', default='localhost'),
+        'PORT': config('DB_PORT', default='5432'),
+        'ATOMIC_REQUESTS': True,
+        'CONN_MAX_AGE': 60,
+        'OPTIONS': {
+            'connect_timeout': 10,
+            'sslmode': 'require',
+        },
     }
-except ImportError:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
+}
 
-
-# Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator', 'OPTIONS': {'min_length': 12}},
@@ -111,23 +92,19 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-# Internationalization
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'Africa/Nairobi'
 USE_I18N = True
 USE_TZ = True
 
-# Static & Media Files
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static'] if (BASE_DIR / 'static').exists() else []
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# ===== REST Framework Configuration =====
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -145,7 +122,6 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.JSONRenderer',
     ),
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
-    # ✅ SECURITY: Enhanced exception handling
     'EXCEPTION_HANDLER': 'apps.common.exceptions.custom_exception_handler',
     'DEFAULT_THROTTLE_CLASSES': (
         'rest_framework.throttling.AnonRateThrottle',
@@ -154,14 +130,13 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'anon': '100/hour',
         'user': '1000/hour',
-        'login': '5/hour',  # ✅ SECURITY: Very strict login
-        'register': '10/hour',  # ✅ SECURITY: Prevent spam registration
-        'password_reset': '3/hour',  # ✅ SECURITY: Prevent email bombing
-        'payment': '10/hour',  # ✅ SECURITY: Prevent duplicate charges
+        'login': '5/hour',
+        'register': '10/hour',
+        'password_reset': '3/hour',
+        'payment': '10/hour',
     },
 }
 
-# ===== JWT Configuration =====
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
@@ -171,48 +146,20 @@ SIMPLE_JWT = {
     'SIGNING_KEY': SECRET_KEY,
 }
 
-# ===== CORS Configuration =====
-CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='http://localhost:3000,http://localhost:8000', cast=Csv())
+CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='https://frontend-nine-ruby-18.vercel.app', cast=Csv())
 CORS_ALLOW_CREDENTIALS = True
 
-# ===== Security Headers =====
-SECURE_SSL_REDIRECT = not DEBUG
-SESSION_COOKIE_SECURE = not DEBUG
-CSRF_COOKIE_SECURE = not DEBUG
-CSRF_COOKIE_HTTPONLY = False  # Frontend needs to read for CSRF
-CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='http://localhost:3000', cast=Csv())
-
-# HTTP Strict Transport Security (HSTS)
-SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0  # 1 year
-SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
-SECURE_HSTS_PRELOAD = not DEBUG
-
-# Content Security Policy (XSS Protection)
-SECURE_CONTENT_SECURITY_POLICY = {
-    'default-src': ("'self'",),
-    'script-src': ("'self'", "'unsafe-inline'"),
-    'style-src': ("'self'", "'unsafe-inline'"),
-    'img-src': ("'self'", "data:", "https:"),
-    'font-src': ("'self'",),
-    'connect-src': ("'self'", "https://api.kitayi.com"),
-}
-
-# Other security headers
+SECURE_SSL_REDIRECT = True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+CSRF_COOKIE_HTTPONLY = False
+CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='https://frontend-nine-ruby-18.vercel.app', cast=Csv())
+SECURE_HSTS_SECONDS = 31536000
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
 SECURE_BROWSER_XSS_FILTER = True
-SECURE_CONTENT_SECURITY_POLICY_REPORT_ONLY = DEBUG
 X_FRAME_OPTIONS = 'DENY'
 
-# ===== Celery Configuration =====
-CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='redis://localhost:6379/0')
-CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default='redis://localhost:6379/0')
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TIMEZONE = 'Africa/Nairobi'
-CELERY_TASK_TRACK_STARTED = True
-CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes
-
-# ===== Payment Gateway Keys (from .env) =====
 STRIPE_PUBLIC_KEY = config('STRIPE_PUBLIC_KEY', default='')
 STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY', default='')
 
@@ -220,37 +167,20 @@ MPESA_CONSUMER_KEY = config('MPESA_CONSUMER_KEY', default='')
 MPESA_CONSUMER_SECRET = config('MPESA_CONSUMER_SECRET', default='')
 MPESA_BUSINESS_SHORTCODE = config('MPESA_BUSINESS_SHORTCODE', default='')
 MPESA_PASSKEY = config('MPESA_PASSKEY', default='')
-MPESA_ENVIRONMENT = config('MPESA_ENVIRONMENT', default='sandbox')  # sandbox or production
+MPESA_ENVIRONMENT = config('MPESA_ENVIRONMENT', default='sandbox')
 
 PAYPAL_MODE = config('PAYPAL_MODE', default='sandbox')
 PAYPAL_CLIENT_ID = config('PAYPAL_CLIENT_ID', default='')
 PAYPAL_CLIENT_SECRET = config('PAYPAL_CLIENT_SECRET', default='')
 
-# ===== AWS S3 Configuration (for PDFs, images) =====
-USE_S3 = config('USE_S3', default=False, cast=bool)
-if USE_S3:
-    AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID')
-    AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY')
-    AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME')
-    AWS_S3_REGION_NAME = config('AWS_S3_REGION_NAME', default='us-east-1')
-    AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
-    AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}
-    
-    STATIC_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/static/'
-    STATIC_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-    MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/media/'
-    MEDIA_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-
-# ===== Email Configuration =====
 EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
 EMAIL_HOST = config('EMAIL_HOST', default='smtp.sendgrid.net')
 EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
 EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='apikey')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@kitayisolutions.com')
-FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:8000')
+FRONTEND_URL = config('FRONTEND_URL', default='https://frontend-nine-ruby-18.vercel.app')
 
-# ===== Logging =====
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -279,7 +209,6 @@ LOGGING = {
     },
 }
 
-# ===== DRF Spectacular (API Docs) =====
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Kitayi Solutions API',
     'DESCRIPTION': 'Water Delivery & Payment Platform API',
@@ -287,21 +216,4 @@ SPECTACULAR_SETTINGS = {
     'SERVE_INCLUDE_SCHEMA': False,
 }
 
-# ===== Sentry Error Tracking =====
-SENTRY_DSN = config('SENTRY_DSN', default='')
-if SENTRY_DSN:
-    import sentry_sdk
-    sentry_sdk.init(dsn=SENTRY_DSN)
-
-# ===== Custom User Model =====
 AUTH_USER_MODEL = 'users.User'
-
-# ===== Cloudinary Storage Configuration =====
-USE_CLOUDINARY = config('USE_CLOUDINARY', default=False, cast=bool)
-if USE_CLOUDINARY:
-    CLOUDINARY_STORAGE = {
-        'CLOUD_NAME': config('CLOUDINARY_CLOUD_NAME'),
-        'API_KEY': config('CLOUDINARY_API_KEY'),
-        'API_SECRET': config('CLOUDINARY_API_SECRET'),
-    }
-    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'

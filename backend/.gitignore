@@ -32,3 +32,6 @@ celerybeat.pid
 .coverage
 htmlcov/
 .pytest_cache/
+
+.vercel
+.env*.local

@@ -149,7 +149,7 @@ export default function Login() {
             <div className="flex flex-col gap-3">
               <button
                 type="button"
-                onClick={async () => { setSocialLoading(true); setError(''); try { await googleLogin(); navigate('/dashboard'); } catch { setError('Google sign-in failed.'); } finally { setSocialLoading(false); } }}
+                onClick={async () => { setSocialLoading(true); setError(''); try { await googleLogin(); navigate('/dashboard'); } catch (e) { console.error('Google sign-in error:', e); setError('Google sign-in failed.'); } finally { setSocialLoading(false); } }}
                 disabled={socialLoading}
                 className="btn-outline btn-lg w-full flex items-center justify-center gap-3"
               >
@@ -158,7 +158,7 @@ export default function Login() {
               </button>
               <button
                 type="button"
-                onClick={async () => { setSocialLoading(true); setError(''); try { await facebookLogin(); navigate('/dashboard'); } catch { setError('Facebook sign-in failed.'); } finally { setSocialLoading(false); } }}
+                onClick={async () => { setSocialLoading(true); setError(''); try { await facebookLogin(); navigate('/dashboard'); } catch (e) { console.error('Facebook sign-in error:', e); setError('Facebook sign-in failed.'); } finally { setSocialLoading(false); } }}
                 disabled={socialLoading}
                 className="btn-outline btn-lg w-full flex items-center justify-center gap-3"
               >
