@@ -154,7 +154,7 @@ export default function CustomerDashboard() {
             <p className="text-sm font-bold truncate" style={{ color: 'white' }}>{user?.full_name}</p>
             <p className="text-xs truncate" style={{ color: '#475569' }}>{user?.email}</p>
           </div>
-          <button onClick={logout} className="p-2 rounded-lg" style={{ color: '#64748b' }}>
+          <button onClick={logout} title="Sign out" className="p-2 rounded-lg" style={{ color: '#64748b' }}>
             <LogOut className="w-4 h-4" />
           </button>
         </div>
@@ -166,7 +166,7 @@ export default function CustomerDashboard() {
       <div className="flex-1 flex flex-col min-w-0">
         <header className="h-16 border-b px-6 flex items-center justify-between shrink-0" style={{ backgroundColor: 'white', borderColor: '#e2e8f0' }}>
           <div className="flex items-center gap-3">
-            <button className="md:hidden p-2 rounded-lg" style={{ color: '#64748b' }} onClick={() => setSidebarOpen(true)}>
+            <button className="md:hidden p-2 rounded-lg" aria-label="Toggle sidebar" style={{ color: '#64748b' }} onClick={() => setSidebarOpen(true)}>
               <Menu className="w-5 h-5" />
             </button>
             <h2 className="font-display font-bold text-sm md:text-base" style={{ color: '#0f172a' }}>
@@ -257,7 +257,7 @@ export default function CustomerDashboard() {
                           <p className="font-semibold text-sm mb-1">{p.name}</p>
                           <div className="flex items-center justify-between">
                             <span className="font-bold" style={{ color: '#2563eb' }}>Ksh {p.price.toLocaleString()}</span>
-                            <button className="btn-ghost btn-sm p-1"><Plus className="w-3.5 h-3.5" /></button>
+                            <button aria-label="Add to cart" className="btn-ghost btn-sm p-1"><Plus className="w-3.5 h-3.5" /></button>
                           </div>
                         </div>
                       </div>
@@ -320,14 +320,14 @@ export default function CustomerDashboard() {
                   ))}
                   {totalOrderPages > 1 && (
                     <div className="flex items-center justify-center gap-4 py-4">
-                      <button onClick={() => setOrderPage(p => Math.max(1, p - 1))} disabled={orderPage === 1}
+                      <button onClick={() => setOrderPage(p => Math.max(1, p - 1))} disabled={orderPage === 1} aria-label="Previous page"
                         className="btn-secondary btn-sm" style={{ borderRadius: '0.5rem' }}>
                         <ChevronLeft className="w-4 h-4" />
                       </button>
                       <span className="text-caption" style={{ color: 'var(--text-muted)' }}>
                         Page {orderPage} / {totalOrderPages}
                       </span>
-                      <button onClick={() => setOrderPage(p => Math.min(totalOrderPages, p + 1))} disabled={orderPage === totalOrderPages}
+                      <button onClick={() => setOrderPage(p => Math.min(totalOrderPages, p + 1))} disabled={orderPage === totalOrderPages} aria-label="Next page"
                         className="btn-secondary btn-sm" style={{ borderRadius: '0.5rem' }}>
                         <ChevronRight className="w-4 h-4" />
                       </button>
@@ -485,23 +485,23 @@ export default function CustomerDashboard() {
             <div className="card-body flex flex-col gap-5">
               <div className="flex justify-between items-center">
                 <h3 className="text-h3">New Subscription</h3>
-                <button onClick={() => setNewSubOpen(false)} className="btn-ghost btn-sm"><X className="w-5 h-5" /></button>
+                <button onClick={() => setNewSubOpen(false)} aria-label="Close" className="btn-ghost btn-sm"><X className="w-5 h-5" /></button>
               </div>
               <div className="flex flex-col gap-4">
                 <div>
-                  <label className="label">Product</label>
-                  <select value={subProduct} onChange={e => setSubProduct(e.target.value)} className="select">
+                  <label className="label" htmlFor="subProduct">Product</label>
+                  <select id="subProduct" value={subProduct} onChange={e => setSubProduct(e.target.value)} className="select">
                     {products.map(p => <option key={p.id} value={p.id}>{p.name} — Ksh {p.price}/unit</option>)}
                   </select>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="label">Quantity</label>
-                    <input type="number" value={subQty} min={1} onChange={e => setSubQty(+e.target.value)} className="input" />
+                    <label className="label" htmlFor="subQty">Quantity</label>
+                    <input id="subQty" type="number" value={subQty} min={1} onChange={e => setSubQty(+e.target.value)} className="input" />
                   </div>
                   <div>
-                    <label className="label">Frequency</label>
-                    <select value={subFreq} onChange={e => setSubFreq(e.target.value)} className="select">
+                    <label className="label" htmlFor="subFreq">Frequency</label>
+                    <select id="subFreq" value={subFreq} onChange={e => setSubFreq(e.target.value)} className="select">
                       {['Weekly', 'Bi-Weekly', 'Monthly'].map(f => <option key={f}>{f}</option>)}
                     </select>
                   </div>

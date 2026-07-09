@@ -160,12 +160,12 @@ export default function AdminDashboard() {
               </button>
             ))}
           </nav>
-          <button className="lg:hidden p-2" style={{ color: '#64748b' }} onClick={() => setSidebarOpen(!sidebarOpen)}>
+          <button className="lg:hidden p-2" aria-label="Toggle sidebar" style={{ color: '#64748b' }} onClick={() => setSidebarOpen(!sidebarOpen)}>
             <Menu className="w-5 h-5" />
           </button>
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={() => setShortcutsOpen(true)} className="btn-ghost btn-sm">
+          <button onClick={() => setShortcutsOpen(true)} aria-label="Keyboard shortcuts" className="btn-ghost btn-sm">
             <Keyboard className="w-4 h-4" />
           </button>
           <button onClick={() => window.print()} className="btn-secondary btn-sm hidden md:flex">
@@ -249,7 +249,7 @@ export default function AdminDashboard() {
                         onChange={e => { setSearchQuery(e.target.value); setCurrentPage(1); }}
                         className="input pl-10" />
                     </div>
-                    <select value={filterStatus} onChange={e => { setFilterStatus(e.target.value); setCurrentPage(1); }} className="select">
+                    <select title="Filter by status" value={filterStatus} onChange={e => { setFilterStatus(e.target.value); setCurrentPage(1); }} className="select">
                       <option value="">All Status</option>
                       <option value="Pending">Pending</option>
                       <option value="Approved">Approved</option>
@@ -305,13 +305,13 @@ export default function AdminDashboard() {
                           </div>
                           {order.status === 'Approved' && (
                             <div className="mt-3 pt-3 flex gap-2" style={{ borderTop: '1px solid var(--border)' }}>
-                              <select value={selectedDriver} onChange={e => setSelectedDriver(e.target.value)} className="select flex-1">
+                              <select title="Select driver" value={selectedDriver} onChange={e => setSelectedDriver(e.target.value)} className="select flex-1">
                                 <option value="">Select Driver</option>
                                 <option>John Kamau</option>
                                 <option>Jane Wanjiru</option>
                                 <option>Peter Odhiambo</option>
                               </select>
-                              <select value={selectedVehicle} onChange={e => setSelectedVehicle(e.target.value)} className="select flex-1">
+                              <select title="Select vehicle" value={selectedVehicle} onChange={e => setSelectedVehicle(e.target.value)} className="select flex-1">
                                 {vehicles.filter(v => v.status === 'Available').map(v => (
                                   <option key={v.id} value={v.id}>{v.plate_number}</option>
                                 ))}
@@ -327,10 +327,10 @@ export default function AdminDashboard() {
                           Showing {paginatedOrders.length} of {filteredOrders.length} orders
                         </p>
                         <div className="flex gap-2">
-                          <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="btn-secondary btn-sm">
+                          <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} aria-label="Previous page" className="btn-secondary btn-sm">
                             <ChevronLeft className="w-4 h-4" />
                           </button>
-                          <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="btn-secondary btn-sm">
+                          <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} aria-label="Next page" className="btn-secondary btn-sm">
                             <ChevronRight className="w-4 h-4" />
                           </button>
                         </div>
@@ -374,7 +374,7 @@ export default function AdminDashboard() {
               <div className="card-body flex flex-col gap-4">
                 <div className="flex justify-between items-center">
                   <h3 className="text-h3">Order Management</h3>
-                  <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="select">
+                  <select title="Filter orders" value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="select">
                     <option value="">All Orders ({orders.length})</option>
                     <option value="Pending">Pending</option>
                     <option value="Approved">Approved</option>
@@ -629,7 +629,7 @@ export default function AdminDashboard() {
             <div className="card-body flex flex-col gap-5">
               <div className="flex justify-between items-start">
                 <h3 className="text-h3">{selectedOrder.tracking_number}</h3>
-                <button onClick={() => setShowOrderDetail(false)} className="btn-ghost btn-sm">
+                <button onClick={() => setShowOrderDetail(false)} aria-label="Close" className="btn-ghost btn-sm">
                   <X className="w-5 h-5" />
                 </button>
               </div>

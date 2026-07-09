@@ -134,11 +134,11 @@ export default function ShopPage() {
                       </div>
                       {cartItem ? (
                         <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3">
-                          <button onClick={() => updateQty(product.id, -1)} className="btn-secondary btn-sm w-9 h-9 p-0 flex items-center justify-center">
+                          <button onClick={() => updateQty(product.id, -1)} aria-label="Decrease quantity" className="btn-secondary btn-sm w-9 h-9 p-0 flex items-center justify-center">
                             <Minus className="w-3.5 h-3.5" />
                           </button>
                           <span className="text-center text-sm font-semibold">{cartItem.qty} in cart</span>
-                          <button onClick={() => updateQty(product.id, 1)} className="btn-primary btn-sm w-9 h-9 p-0 flex items-center justify-center">
+                          <button onClick={() => updateQty(product.id, 1)} aria-label="Increase quantity" className="btn-primary btn-sm w-9 h-9 p-0 flex items-center justify-center">
                             <Plus className="w-3.5 h-3.5" />
                           </button>
                         </div>
@@ -155,13 +155,13 @@ export default function ShopPage() {
               {/* Pagination */}
               {totalPages > 1 && (
                 <div className="col-span-full flex items-center justify-center gap-6 py-6">
-                  <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="btn-secondary btn-sm">
+                  <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} aria-label="Previous page" className="btn-secondary btn-sm">
                     <ChevronLeft className="w-4 h-4" />
                   </button>
                   <span className="text-caption" style={{ color: 'var(--text-muted)' }}>
                     Page {currentPage} / {totalPages}
                   </span>
-                  <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="btn-secondary btn-sm">
+                  <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} aria-label="Next page" className="btn-secondary btn-sm">
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -204,7 +204,7 @@ export default function ShopPage() {
                             <span className="text-sm font-bold" style={{ color: '#2563eb' }}>
                               Ksh {(product.price * qty).toLocaleString()}
                             </span>
-                            <button onClick={() => removeItem(product.id)} className="btn-ghost btn-sm p-1" style={{ color: 'var(--text-muted)' }}>
+                            <button onClick={() => removeItem(product.id)} aria-label="Remove item" className="btn-ghost btn-sm p-1" style={{ color: 'var(--text-muted)' }}>
                               <Minus className="w-3.5 h-3.5" />
                             </button>
                           </div>
