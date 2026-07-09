@@ -34,7 +34,7 @@ export default function Navbar() {
     <header
       className="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
       style={{
-        backgroundColor: isScrolled ? 'var(--surface)' : 'transparent',
+        backgroundColor: isScrolled ? 'var(--surface-secondary)' : 'transparent',
         borderBottom: isScrolled ? '1px solid var(--border)' : 'none',
         boxShadow: isScrolled ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
       }}

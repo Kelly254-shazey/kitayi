@@ -1,7 +1,10 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios';
 
 // Match the environment variable provided in CI/CD pipeline
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
+// When deploying frontend separately from backend, set VITE_API_URL in Vercel env.
+// If blank/unset, requests go to the same origin (relative path) — works with Vercel rewrites.
+const rawUrl = import.meta.env.VITE_API_URL?.trim();
+const API_BASE_URL = rawUrl && rawUrl !== 'http://localhost:8000/api/v1' ? rawUrl : '/api/v1';
 
 // Extend the Axios config type to include our custom property
 interface CustomRequestConfig extends InternalAxiosRequestConfig {
