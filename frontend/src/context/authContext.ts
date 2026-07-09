@@ -7,6 +7,7 @@ export interface User {
   full_name: string;
   account_number?: string;
   is_email_verified?: boolean;
+  isFirebaseUser?: boolean;
 }
 
 export interface RegisterData {
@@ -24,6 +25,9 @@ export interface AuthContextType {
   login: (email: string, password: string) => Promise<User>;
   register: (data: RegisterData) => Promise<User>;
   logout: () => void;
+  googleLogin: () => Promise<User>;
+  facebookLogin: () => Promise<User>;
+  isFirebaseActive: boolean;
 }
 
 export const AuthContext = createContext<AuthContextType | null>(null);

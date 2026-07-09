@@ -19,6 +19,7 @@
     "@fontsource/space-grotesk": "^5.2.10",
     "axios": "^1.17.0",
     "clsx": "^2.1.1",
+    "firebase": "^12.15.0",
     "framer-motion": "^12.40.0",
     "lucide-react": "^1.17.0",
     "react": "^19.2.6",
